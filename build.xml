@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ====================================================================== 
+     27 Jul 2008 14:57:36                                                        
+
+     CyclePainter    
+     Paint cycles onto a Riemann surface
+     
+     tim                                                                
+     ====================================================================== -->
+<project name="CyclePainter" default="compile">	
+  <description>
+    Paint cycles onto a Riemann surface
+  </description>
+  
+  <!-- ================================= 
+       target: run              
+       ================================= -->
+  <target name="run" depends="package,find-maple" description="--> Runs project">
+    <java classname="cyclepainter.Main"
+          fork="true">
+      <env key="LD_LIBRARY_PATH" value="${maple.bin}"/>
+      <classpath>
+        <path refid="maple.classes"/>
+        <path location="dist/CyclePainter.jar"/>
+      </classpath>
+    </java>
+  </target>
+
+  
+  <!-- ================================= 
+       target: compile              
+       ================================= -->
+  <target name="compile" depends="find-maple" description="--> Compile necessary sources">
+    <property name="build.dir" value="build/classes"/>
+    <mkdir dir="${build.dir}"/>
+    <javac srcdir="src"
+           destdir="${build.dir}"
+           debug="on">
+      <classpath refid="maple.classes"/>
+      <compilerarg value="-Xlint:deprecation"/>
+    </javac>
+    <copy todir="${build.dir}/cyclepainter/mapleutil" file="src/cyclepainter/mapleutil/utils.mpl"/>
+  </target>
+
+  <!-- ================================= 
+       target: package              
+       ================================= -->
+  <target name="package" depends="compile,jar-manifest" description="--> Put everything in a .jar">
+    <mkdir dir="dist"/>
+    <jar destfile="dist/CyclePainter.jar"
+         manifest="${manifest.mf}"
+         basedir="build/classes"/>
+  </target>
+  
+  <!-- ================================= 
+       target: clean              
+       ================================= -->
+  <target name="clean" depends="" description="--> Remove class files etc">
+    <delete dir="build"/>
+    <delete dir="dist"/>
+  </target>
+
+  
+  <!-- - - - - - - - - - - - - - - - - - 
+       target: jar-manifest                      
+       - - - - - - - - - - - - - - - - - -->
+  <target name="jar-manifest">
+    <property name="manifest.mf"
+	      location="${build.dir}/manifest.mf"/>
+    <manifest file="${manifest.mf}">	
+      <attribute name="Main-Class" value="cyclepainter.Main"/>
+      <attribute name="Created-By" value="Me"/>
+      <attribute name="Class-path" value="${maple.dir}/java/externalcall.jar ${maple.dir}/java/jopenmaple.jar"/>
+    </manifest>
+  </target>
+  
+  <!-- - - - - - - - - - - - - - - - - - 
+       target: find-maple                      
+       - - - - - - - - - - - - - - - - - -->
+  <target name="find-maple">
+    <!-- Get main maple directory -->
+    <dirset dir="/usr/local/" id="maple.cands">
+      <include name="maple*"/>
+    </dirset>
+    <pathconvert property="maple.dir" refid="maple.cands"/>
+
+    <!-- And binary directory -->
+    <dirset dir="${maple.dir}" id="maple.bincands">
+      <include name="bin.*"/>
+    </dirset>
+    <pathconvert property="maple.bin" refid="maple.bincands"/>
+    <path id="maple.classes">
+      <pathelement location="${maple.dir}/java/jopenmaple.jar"/>
+      <pathelement path="${maple.dir}/java/externalcall.jar"/>
+    </path>
+    <echo>Dir used ${maple.dir}</echo>
+    <echo>Bindir ${maple.bin}</echo>
+  </target>
+</project>
