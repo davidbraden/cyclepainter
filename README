@@ -1,0 +1,40 @@
+Contact: t.p.northover@sms.ed.ac.uk
+
+Build instructions
+------------------
+
+Building should be fairly simple on Linux provided you have Java and
+ant, and Maple is in /usr/local. "ant package" should do everything
+needed. If it can't find maple then modifying build.xml may be
+needed. The result is a .jar file in "dist"
+
+Execution instructions
+----------------------
+
+run.sh attempts to execute CyclePainter. This step is even more
+finicky about paths, so may need changing for anything unexpected.
+
+
+Use
+---
+
+The program starts up with a basic elliptic curve being studied. You
+can see the branch points plotted, together with cuts going from the
+origin (referred to as "base point") to each. An arbitrary choice of
+sheets is made at "sheets base" and everything calculated relative to
+that.
+
+Two (empty) paths are also created. To use them: 
+  + drag the label (e.g. "a[1]") onto the buttons below
+    "Active/visible paths".
+  + Make sure that button is selected.
+  + Left click to add points in the canvas widget. Points lock to
+    nearby ones and will continue until the right button is pressed.
+
+Notice that colour changes whenever a cut is crossed to indicate which
+sheet the path is on. The "Sheet" combobox selects which sheet the
+very first point is on.
+
+Two paths can be displayed at once (the two buttons below
+"Active/Visible paths"). The active path is drawn solid, the other
+path is drawn dashed.
