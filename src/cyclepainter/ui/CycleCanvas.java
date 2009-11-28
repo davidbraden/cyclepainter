@@ -249,11 +249,11 @@ public class CycleCanvas extends JComponent
     }
 
     // Listen for path changed events
-    public void visiblePathsChanged(java.util.List<String> newVisible) {
+    public void visiblePathsChanged(java.util.List<RiemannPath> newVisible) {
 	visiblePaths = new RiemannPath[newVisible.size()];
 	int i = 0;
-	for(String name : newVisible) {
-	    visiblePaths[i++] = picState.getPath(name);
+	for(RiemannPath vis : newVisible) {
+	    visiblePaths[i++] = vis;
 	}
 
 	selectedPoint = null;
@@ -262,12 +262,14 @@ public class CycleCanvas extends JComponent
 	repaint();
     }
 
-    public void activePathChanged(String newActive) {
+    public void activePathChanged(RiemannPath newActive) {
 	// We want to know about any updates to the active path.
 	if(activePath != null)
 	    activePath.removePathChangeListener(this);
 
-	activePath = picState.getPath(newActive);
+
+        activePath = newActive;
+
 	if(activePath != null)
 	    activePath.addPathChangeListener(this);
 

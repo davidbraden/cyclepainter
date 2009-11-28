@@ -39,12 +39,13 @@ import javax.swing.event.*;
  * @author  tim
  */
 public class PathChooser extends JPanel 
-    implements ListDataListener, PathSetListener {
+    implements ListDataListener, PathSetListener, ResetListener {
 	static final long serialVersionUID = 1;
 
     public PathChooser(PicState picState) {
     	this.picState = picState;
 	picState.addPathSetListener(this);
+        picState.addResetListener(this);
     	
     	// We want to know when the list of valid names changes so we can
     	// decide which buttons are still valid.
@@ -152,13 +153,13 @@ public class PathChooser extends JPanel
     private void pruneButtons() {
     	boolean visChanged = false, activeRemoved = false;
     	for(JToggleButton btn : visPaths) {
-    		if(!picState.hasPath(btn.getText())) {
-    			btn.setText("");
-			btn.setEnabled(false);
-    			visChanged = true;
-    			if(btn.isSelected())
-    				activeRemoved = true;
-    		}
+            if(!picState.hasPath(btn.getText())) {
+                btn.setText("");
+                btn.setEnabled(false);
+                visChanged = true;
+                if(btn.isSelected())
+                    activeRemoved = true;
+            }
     	}
 
 	// Active path has been deleted, find another candidate to make
@@ -173,26 +174,26 @@ public class PathChooser extends JPanel
     	}
 
     	if(visChanged)
-    		fireVisiblePathsChanged();
-    	if(activeRemoved)
-    		fireActivePathChanged();
+            fireVisiblePathsChanged();
+        if(activeRemoved)
+            fireActivePathChanged();
     	
     }
 
     // Stuff to be a good model of path selection
-    public String getActivePath() {
+    public RiemannPath getActivePath() {
     	for(JToggleButton btn : visPaths) {
-    		if(btn.isSelected() && btn.getText().length() != 0)
-    			return btn.getText();
+            if(btn.isSelected() && btn.getText().length() != 0)
+                return picState.getPath(btn.getText());
     	}
     	return null;
     }
     
-    public List<String> getVisiblePaths() {
-    	List<String> names = new LinkedList<String>();
+    public List<RiemannPath> getVisiblePaths() {
+    	List<RiemannPath> names = new LinkedList<RiemannPath>();
     	for(JToggleButton btn : visPaths) {
-    		if(btn.getText().length() != 0)
-    			names.add(btn.getText());
+            if(btn.getText().length() != 0)
+                names.add(picState.getPath(btn.getText()));
     	}
     	return names;
     }
@@ -201,6 +202,17 @@ public class PathChooser extends JPanel
 	pathList.setListData(new Vector<String>(picState.getPathNames()));
 
 	pruneButtons();
+    }
+
+    public void dataReset(PicState st) {
+        // PicState data reset, we must clear out all active paths
+    	for(JToggleButton btn : visPaths) {
+            btn.setText("");
+            btn.setEnabled(false);
+    	}
+
+        fireVisiblePathsChanged();
+        fireActivePathChanged();
     }
     
     public void addPathSelectionListener(PathSelectionListener l) {
@@ -212,7 +224,7 @@ public class PathChooser extends JPanel
     }
     
     protected void fireVisiblePathsChanged() {
-    	List<String> visiblePaths = getVisiblePaths();
+    	List<RiemannPath> visiblePaths = getVisiblePaths();
     	for(PathSelectionListener l : listeners) {
     		l.visiblePathsChanged(visiblePaths);
     	}

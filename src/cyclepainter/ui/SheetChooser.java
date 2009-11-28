@@ -82,15 +82,15 @@ public class SheetChooser extends JPanel
 	return dataDisplay;
     }
 
-    public void visiblePathsChanged(List<String> newVisible) {
+    public void visiblePathsChanged(List<RiemannPath> newVisible) {
 	// Don't care
     }
 
-    public void activePathChanged(String newActive) {
+    public void activePathChanged(RiemannPath newActive) {
 	if(path != null)
 	    path.removePathChangeListener(this);
 	
-	path = picState.getPath(newActive);
+        path = newActive;
 	if(path != null) {
 	    path.addPathChangeListener(this);
 	    sheetChanged(path.getInitialSheet());
