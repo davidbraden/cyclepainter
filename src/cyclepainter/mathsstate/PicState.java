@@ -198,21 +198,6 @@ public class PicState {
     public void writeMetapost(OutputStream outBasic) {
 	PrintStream out = new PrintStream(outBasic);
 
-	// Routine to draw the branch points.
-	out.println("def drawbranches(expr trans) = begingroup");
-	for(Point2D branch : surface.getFiniteBranches()) {
-	    out.printf("\tdrawdot (%f,%f) transformed trans;\n", 
-		       branch.getX(), branch.getY());
-	    out.printf("\tdraw ( (%f,%f)--(%f,%f) ) transformed trans withcolor 0.5white;\n", 
-		       surface.getBasePoint().getX(), 
-		       surface.getBasePoint().getY(), 
-		       branch.getX(), branch.getY());
-	}
-	
-	out.println("endgroup");
-	out.println("enddef;");
-	out.println();
-
 	// Define the colours used.
 	out.println("color colours[];");
 	for(int i = 0; i < Colours.SHEET_COLOURS.length; ++i) {
@@ -225,6 +210,7 @@ public class PicState {
 	// Metapost is *horribly* limited, so we have to name them A,B,...
 	// regardless of the official name.
 	char specifier = 'A';
+	double minX = Double.POSITIVE_INFINITY;
 	for(RiemannPath path : paths.values()) {
 	    out.printf("def draw%c(expr trans) = begingroup\n", specifier++);
 	    out.println("save p;");
@@ -239,6 +225,8 @@ public class PicState {
 	    out.println("\tpath p;");
 	    out.print("\tp := ");
 	    for(RiemannPath.PathSeg seg : segs) {
+		if (seg.begin.getX() < minX)
+		    minX = seg.begin.getX();
 		out.printf("(%f,%f)..", seg.begin.getX(), seg.begin.getY());
 	    }
 	    out.println("cycle;");
@@ -255,6 +243,37 @@ public class PicState {
 	    out.println("endgroup");
 	    out.println("enddef;");		
 	}
+
+	// Routine to draw the branch points.
+	out.println("def drawbranches(expr trans) = begingroup");
+	for (Point2D branch : surface.getFiniteBranches()) {
+	    if (branch.getX() < minX)
+		minX = branch.getX();
+	    out.printf("\tdraw ( (%f,%f)--(%f,%f) ) transformed trans withcolor 0.5white;\n", 
+		       surface.getBasePoint().getX(), 
+		       surface.getBasePoint().getY(), 
+		       branch.getX(), branch.getY());
+	}
+
+	// And the infinite one...
+	minX = (minX - surface.getBasePoint().getX())*1.1;
+	minX += surface.getBasePoint().getX();
+	out.printf("\tdraw ( (%f,%f)--(%f,%f) ) transformed trans withcolor 0.5white;\n",
+		   surface.getBasePoint().getX(),
+		   surface.getBasePoint().getY(),
+		   minX, surface.getBasePoint().getY());
+
+	out.println("\tpickup pencircle scaled 4pt;");
+	for(Point2D branch : surface.getFiniteBranches()) {
+	    out.printf("\tdrawdot (%f,%f) transformed trans;\n", 
+		       branch.getX(), branch.getY());
+	}
+
+	out.println("\tpickup defaultpen;");
+
+	out.println("endgroup");
+	out.println("enddef;");
+	out.println();
     }
 
     /**
