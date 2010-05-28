@@ -177,6 +177,10 @@ public class MainWindow extends javax.swing.JFrame {
 
 		    try {
 			filename = picDialog.getSelectedFile();
+
+			if (!filename.getName().endsWith(".pic"))
+			    filename = new File(filename.getPath()+".pic");
+
 			if(filename.exists() &&
 			   !confirm("Overwrite selected file?"))
 			    return;
