@@ -135,6 +135,10 @@ public class MapleUtils {
 	}
     }
 
+    public void assignName(String name, Algebraic value) throws MapleException {
+	engine.newName(name, true).assign(value);
+    }
+
     // Maple utilities
     /**
      * Converts an algebraic maple result to a Point2D

@@ -204,6 +204,10 @@ public class RiemannSurface {
     public Point2D getSheetsBase() {
 	return this.sheetsBase;
     }
+
+    public Algebraic getMonodromy() {
+	return monodromy;
+    }
 	
 
     public void addSurfaceChangeListener(SurfaceChangeListener l) {

@@ -125,6 +125,15 @@ public class MainWindow extends javax.swing.JFrame {
 
     void initMenu() {
 	JMenuBar bar = new JMenuBar();
+
+	bar.add(initFileMenu());
+
+	bar.add(initCutSchemeMenu());
+	
+	setJMenuBar(bar);
+    }
+
+    JMenu initFileMenu() {
 	JMenu file = new JMenu("File");
 
 	Action ac = new AbstractAction("New") {
@@ -213,9 +222,42 @@ public class MainWindow extends javax.swing.JFrame {
 
 	file.add(new JSeparator());
 
-	bar.add(file);
-	
-	setJMenuBar(bar);
+	return file;
+    }
+
+    JMenu initCutSchemeMenu() {
+	JMenu cutSchemes = new JMenu("Cutting methods");
+
+	Action ac = new AbstractAction("Finite radial cuts") {
+		public void actionPerformed(ActionEvent e) {
+		    CutScheme cur = picState.getCutScheme();
+		    picState.getSurface().removeSurfaceChangeListener(cur);
+		    
+		    cur = new RadialCutScheme();
+		    cur.surfaceChanged(picState.getSurface());
+		    cycleCanvas.surfaceChanged(picState.getSurface());
+		    picState.getSurface().addSurfaceChangeListener(cur);
+
+		    picState.setCutScheme(cur);
+		}
+	    };
+	cutSchemes.add(ac);
+
+	ac = new AbstractAction("Radial cuts to infinity") {
+		public void actionPerformed(ActionEvent e) {
+		    CutScheme cur = picState.getCutScheme();
+		    picState.getSurface().removeSurfaceChangeListener(cur);
+		    
+		    cur = new OutRadialCutScheme();
+		    cur.surfaceChanged(picState.getSurface());
+		    cycleCanvas.surfaceChanged(picState.getSurface());
+		    picState.getSurface().addSurfaceChangeListener(cur);
+		    picState.setCutScheme(cur);
+		}
+	    };
+	cutSchemes.add(ac);
+
+	return cutSchemes;
     }
 
     boolean confirm(String message) {

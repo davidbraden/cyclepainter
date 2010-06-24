@@ -162,6 +162,7 @@ public class RiemannPath extends ArrayList<Point2D> {
 		Algebraic newSheet = maple.evaluate(cmd);
 		sheet = maple.algToPoint(newSheet);
 		fireSheetChangedEvent();
+		firePathChangedEvent();
 	    } catch(MapleException e) {
 		System.err.println("Unable to deform path continuously. Is the initial point near a branch?");
 		System.err.println("Path's sheets are now probably wrong.");

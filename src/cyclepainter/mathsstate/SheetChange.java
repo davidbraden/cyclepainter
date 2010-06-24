@@ -36,4 +36,8 @@ public class SheetChange {
 	this.isection = isection;
 	this.dir = dir;
     }
+
+    public String toString() {
+	return String.format("<ShCh: branch=%s, isection=%s, dir=%d>", branch, isection, dir);
+    }
 }

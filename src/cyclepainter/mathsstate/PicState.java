@@ -87,6 +87,10 @@ public class PicState {
         return cutScheme;
     }
 
+    public void setCutScheme(CutScheme scheme) {
+	cutScheme = scheme;
+    }
+
     public MapleUtils getMaple() {
 	return maple;
     }

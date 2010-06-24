@@ -55,8 +55,8 @@ public class RadialCutScheme extends CutScheme {
 
     public int getSheet(Point2D x, Point2D y) throws SheetPropagationException {
 	if (lastX == null || ! lastX.equals(x)) {
-	    lastX = x;
-	    lastSheets = getAllSheets(x);
+	    lastX = (Point2D)x.clone();
+	    lastSheets = getAllSheets(lastX);
 	}
 
 	double bestDist = Double.POSITIVE_INFINITY;
@@ -74,8 +74,8 @@ public class RadialCutScheme extends CutScheme {
 
     public Point2D getYValue(Point2D x, int sheet) throws SheetPropagationException {	
 	if (lastX == null || ! lastX.equals(x)) {
-	    lastX = x;
-	    lastSheets = getAllSheets(x);
+	    lastX = (Point2D)x.clone();
+	    lastSheets = getAllSheets(lastX);
 	}
 
 	return lastSheets.get(sheet);
@@ -95,9 +95,9 @@ public class RadialCutScheme extends CutScheme {
 	this.surface = surface;
 	maple = surface.getMaple();
 
-	branchCuts = new LinkedList<Line2D>();
+	branchCuts = new HashMap<Point2D, Line2D>();
 	for (Point2D pt : surface.getFiniteBranches()) {
-	    branchCuts.add(new Line2D.Double(surface.getBasePoint(), pt));
+	    branchCuts.put(pt, new Line2D.Double(surface.getBasePoint(), pt));
 	}
 
 	if (surface != null)
@@ -107,13 +107,10 @@ public class RadialCutScheme extends CutScheme {
     // Implicit assumption that "mono" is still bound to the relevant
     // monodromy in maple's namespace
     void precalcPermutations() {
-
-	
-	// TODO: After here should probably be in cut scheme
-
 	try {
 	    String s;
 	    // Work out the effect of crossing each branch cut
+	    maple.assignName("mono", surface.getMonodromy());
 	    s = String.format("cutmono := mono_to_shift(mono[3], %s, %s):", 
 			      maple.pointToString(surface.getBasePoint()), 
 			      maple.pointToString(surface.getSheetsBase()));
@@ -167,9 +164,8 @@ public class RadialCutScheme extends CutScheme {
 		cmd = "apply_perm(%s, %d):";
 	    else
 		cmd = "apply_perm(map(ListTools[Reverse], %s), %d):";
-			
 	    perm = cutsPermutation.get(descr.branch);
-			
+
 	    cmd = String.format(cmd, perm.toString(), sheet+1);
 	    Algebraic newSheet = maple.evaluate(cmd);
 	    sheet = ((Numeric) newSheet).intValue() - 1;
@@ -224,8 +220,14 @@ public class RadialCutScheme extends CutScheme {
     }
 
     public Collection<Line2D> cutGraph(Point2D minClip, Point2D maxClip) {
-	// TODO: add infinite branch
-	return branchCuts;
+	if (!surface.hasInfiniteBranch())
+	    return branchCuts.values();
+
+	Collection<Line2D> dispCuts = new LinkedList<Line2D>(branchCuts.values());
+	Point2D base = surface.getBasePoint();
+	dispCuts.add(new Line2D.Double(base, new Point2D.Double(minClip.getX(), base.getY())));
+
+	return dispCuts;
     }
 	
     /** Split a segment at each cut it crosses.
@@ -241,12 +243,12 @@ public class RadialCutScheme extends CutScheme {
 		
 	// Find where the line needs to be cut and order by distance
 	// from the beginning
-	for (Line2D cut : branchCuts) {
-	    if (cut.intersectsLine(segment)) {
-		SheetChange shift = intersection(segment, cut);
+	for (Map.Entry<Point2D, Line2D> cut : branchCuts.entrySet()) {
+	    if (cut.getValue().intersectsLine(segment)) {
+		SheetChange shift = intersection(segment, cut.getValue());
 		if(shift.equals(begin))
 		    continue;
-		shift.branch = cut.getP2();
+		shift.branch = cut.getKey();
 		isectPoints.put(shift.isection.distance(begin), shift);
 	    }
 	}
@@ -295,7 +297,7 @@ public class RadialCutScheme extends CutScheme {
     RiemannSurface surface;
 
     HashMap<Point2D, Algebraic> cutsPermutation;
-    java.util.List<Line2D> branchCuts;
+    HashMap<Point2D, Line2D> branchCuts;
     
     java.util.ArrayList<Point2D> lastSheets;
     Point2D lastX;
