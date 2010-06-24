@@ -27,6 +27,7 @@ import java.awt.geom.Point2D;
 import java.awt.Dimension;
 import javax.swing.BoxLayout;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.regex.*;
 import java.awt.event.*;
 
@@ -86,37 +87,49 @@ public class SheetChooser extends JPanel
 	// Don't care
     }
 
-    public void activePathChanged(RiemannPath newActive) {
-	if(path != null)
-	    path.removePathChangeListener(this);
+    public void activePathChanged(RiemannPath oldActive, RiemannPath newActive) {
+	if(oldActive != null)
+	    oldActive.removePathChangeListener(this);
 	
-        path = newActive;
-	if(path != null) {
-	    path.addPathChangeListener(this);
-	    sheetChanged(path.getInitialSheet());
+	if(newActive != null) {
+	    newActive.addPathChangeListener(this);
+	    pathChanged(newActive);
 	}
 	sheetDataModel.sheetsChanged();
+
+        path = newActive;
     }
 	
     public void surfaceChanged(RiemannSurface surf) {
 	sheetDataModel.sheetsChanged();
     }
 	
-    public void pathChanged() {
-	// Don't care
+    public void pathChanged(RiemannPath path) {
+        if (path.size() == 0) {
+            sheetDataModel.sheetsChanged();
+            return;
+        }
+
+        if (!sheetsX.equals(path.get(0))) {
+            sheetsX = path.get(0);
+            sheetDataModel.sheetsChanged();
+        }
     }
 	
-    public void sheetChanged(int newSheet) {
-	combo.setSelectedIndex(newSheet-1);
+    public void sheetChanged(RiemannPath path) {
+	combo.setSelectedIndex(picState.getCutScheme().
+                               getSheet(sheetsX, path.getInitialYValue()));
     }
 	
-    public void allSheetsChanged() {
+    public void allSheetsChanged() {        
 	sheetDataModel.sheetsChanged();
     }
 
     JComboBox combo;
 	
     RiemannPath path;
+    Point2D sheetsX;
+
     PicState picState;
     MapleUtils maple;
 	
@@ -125,17 +138,23 @@ public class SheetChooser extends JPanel
 	
     class SheetDataModel extends DefaultComboBoxModel {
 	public int getSize() {
-	    if(path == null)
-		return 0;
-	    try {
-		return path.getSheets().length();
-	    } catch(MapleException e) {
-		System.err.println("Couldn't get sheet list for combo display.");
-		return 0;
-	    }
+            int size;
+	    if(sheetsX == null)
+		size = 0;
+            
+            size = picState.getCutScheme().numSheets();
+
+            if (yValues == null || size != yValues.size())
+                yValues = new ArrayList<Point2D>(size);
+
+            return size;
 	}
 	public Object getElementAt(int index) {
-	    Point2D sheet = path.getSheetByNum(index+1);
+	    Point2D sheet = picState.getCutScheme().getYValue(sheetsX, index);
+
+            // Keep a cache of the analytic values we're storing.
+            yValues.set(index, sheet);
+
 	    String f = "%d: %.3g+%.3gi";
 	    f = String.format(f, index+1, sheet.getX(), sheet.getY());
 	    return f;
@@ -152,13 +171,16 @@ public class SheetChooser extends JPanel
 	    String sheet = (String)anItem;
 	    Matcher m = DIGITS.matcher(sheet);
 
-	    if(m.lookingAt())
-		path.setInitialSheet(Integer.parseInt(m.group(1)));
+	    if(m.lookingAt()) {
+                int sheetNum = Integer.parseInt(m.group(1)) - 1;
+                path.setInitialYValue(yValues.get(sheetNum));
+            }
 	}
 		
 	public void sheetsChanged() {
 	    fireContentsChanged(this, 0, getSize()-1);
 	}
 		
+        ArrayList<Point2D> yValues;
     }
 }

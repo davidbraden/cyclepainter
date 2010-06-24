@@ -34,125 +34,63 @@ import com.maplesoft.externalcall.*;
 import com.maplesoft.openmaple.List;
 
 public class RiemannPath extends ArrayList<Point2D> {
-    public RiemannPath(RiemannSurface surface) {
+    public RiemannPath() {
 	super();
-	initialize(surface);
+	initialize();
     }
 
-    public RiemannPath(RiemannSurface surface, java.util.List<Point2D> points) {
+    public RiemannPath(java.util.List<Point2D> points) {
 	super(points);
-	initialize(surface);
+	initialize();
     }
 
-    public RiemannPath(RiemannSurface surface, java.util.List<Point2D> points, Point2D sheet) {
+    public RiemannPath(java.util.List<Point2D> points, Point2D sheet) {
 	super(points);
-	initialize(surface);
+	initialize();
 
-	setInitialSheetPoint(sheet);
+	setInitialYValue(sheet);
     }
 
-    void initialize(RiemannSurface surface) {
-	this.surface = surface;
-	this.maple = surface.getMaple();
-	sheets = this.surface.definingSheets;
+    void initialize() {
 	listeners = new EventListenerList();
        
-	setInitialSheetPoint(new Point2D.Double());
-    }
-	
-    /** Calculates sheet number from the current y-value of the sheet.
-     *  Stores result in cache for looking up later.
-     */
-    private void updateSheetNum() {
-	if(isEmpty())
-	    sheets = surface.definingSheets;
-	try {
-	    sheets = surface.getSheets(this.get(0));
-	    String pt = maple.pointToString(sheet);
-	    String s = "best_match(%s, %s)[1]:";
-	    s = String.format(s, pt, sheets);
-	    Numeric num = (Numeric)maple.evaluate(s);
-	    sheetNum =  num.intValue();
-	} catch(MapleException e) {
-	    System.err.println("Couldn't put integer sheet number to point "+sheet);
-	    System.err.println("Unexpected maple error: "+e);
-	    System.err.println("Defaulting to sheet 1 for appearances' sake.");
-	    sheetNum = 1;
-	} catch(SheetPropagationException e) {
-	    System.err.println("Couldn't put integer sheet number to point "+sheet);
-	    System.err.println("Defaulting to sheet 1.");
-	    System.err.println(e);
-	    sheetNum = 1;
-	}
-
-	fireSheetChangedEvent();
+	setInitialYValue(new Point2D.Double());
     }
 
-    /** Makes use of cached sheet number for request */
-    public int getInitialSheet() {
-	return sheetNum;
-    }
-
-    public void setInitialSheet(int sheetNum) throws IndexOutOfBoundsException {
-	if(isEmpty())
-	    return;
-	
-	try {
-	    List sheets = surface.getSheets(this.get(0));
-	    sheet = maple.algToPoint(sheets.select(sheetNum));
-	    this.sheetNum = sheetNum;
-	    fireSheetChangedEvent();
-	} catch(MapleException e) {
-	    throw new IndexOutOfBoundsException("Requested sheet number out of range: "+sheetNum);
-	} catch(SheetPropagationException e) {
-	    System.err.println("Error setting sheet number of path at "+this.get(0));
-	    System.err.println("Ignoring request.");
-	    System.err.println(e);
-	}
-    }
-
-    public Point2D getInitialSheetPoint() {
-	return sheet;
-    }
-
-    public void setInitialSheetPoint(Point2D sheet) {
-	this.sheet = sheet;
-	if(!isEmpty()) {
-	    updateSheetNum();
-	    fireSheetChangedEvent();
-	}
-    }
-	
-    /** The list of y-values which identifies sheet numbers at the initial
-     *  point of this path. Result on an empty path is undefined.
-     *  @return l.select(1) is y-value of sheet 1 at first point...
-     */
-    public List getSheets() {
-	return sheets;
-    }
-	
-    public Point2D getSheetByNum(int index) 
-	throws IndexOutOfBoundsException {
-	try {
-	    List sheets = getSheets();
-	    return maple.algToPoint(sheets.select(index));
-	} catch(MapleException e) {
-	    throw new IndexOutOfBoundsException("Trying to find sheet "
-						+ index + " at " + this.get(0));
-	}
-    }
-	
     public boolean add(Point2D pt) {
 	if(size() != 0 && pt.equals(get(size()-1)))
 	    return true;
 	super.add(pt);
-	if(size() == 1) {
-	    updateSheetNum();
-	}
+
 	firePathChangedEvent();
 	return true;
     }
-	
+
+    /**
+     * Breaks the intrinsic segments up into ones with well-defined sheet and
+     * calculates the 0-indexed sheet number.
+     * 
+     * @return List of segments ready to be plotted.
+     */
+    public java.util.List<SheetedSeg> getSegments(CutScheme cuts) {
+        java.util.LinkedList<SheetedSeg> allSegs = new LinkedList<SheetedSeg>();
+        
+        ListIterator<Point2D> i = this.listIterator();
+
+        Point2D begin = i.next(), end;
+        int sheetNum = cuts.getSheet(begin, sheet);
+
+        while (i.hasNext()) {
+            end = i.next();
+            allSegs.addAll(cuts.splitSegment(begin, end, sheetNum));
+
+            begin = end;
+            sheetNum = allSegs.getLast().sheet;            
+        }
+
+        return allSegs;
+    }
+
     /**
      * Finds closest node on this path to a given point.
      * 
@@ -192,11 +130,12 @@ public class RiemannPath extends ArrayList<Point2D> {
      *        considered as a container otherwise rather pointless.
      * @param to Where it has to go
      */
-    public void displace(Point2D node, Point2D to) {
+    public void displace(RiemannSurface surface, Point2D node, Point2D to) {
 	if(isEmpty())
 	    return;
 	if(node == this.get(0)) {
 	    try {
+                MapleUtils maple = surface.getMaple();
 		String cmd;
 		cmd = String.format("displace_sheet_base(%s, %s, %s):",
 				    surface.getCurveString(),
@@ -204,8 +143,6 @@ public class RiemannPath extends ArrayList<Point2D> {
 				    maple.pointToString(to));
 		Algebraic newSheet = maple.evaluate(cmd);
 		sheet = maple.algToPoint(newSheet);
-		updateSheetNum();
-		fireAllSheetsChangedEvent();
 		fireSheetChangedEvent();
 	    } catch(MapleException e) {
 		System.err.println("Unable to deform path continuously. Is the initial point near a branch?");
@@ -219,53 +156,6 @@ public class RiemannPath extends ArrayList<Point2D> {
     }
 
     /**
-     * Breaks the intrinsic segments up into ones with well-defined sheet and
-     * calculates the 0-indexed sheet number.
-     * 
-     * @return List of segments ready to be plotted.
-     */
-    public java.util.List<PathSeg> getSegments() {
-	int sheet = getInitialSheet();
-	ArrayList<PathSeg> segs = new ArrayList<PathSeg>();
-
-	// And paint the path
-	ListIterator<Point2D> i = listIterator();
-
-		
-	Point2D begin = (Point2D) i.next().clone();
-	
-	while (i.hasNext()) {
-	    PathSeg seg;
-	    Point2D end = i.next();
-	    
-	    // Find the points where we need to split
-	    Collection<SheetChange> isections = surface.splitSegment(begin, end);
-	    
-	    // And do any cutting needed.
-	    for (SheetChange block : isections) {
-		seg = new PathSeg();
-		seg.begin = begin;
-		seg.end = block.isection;
-		seg.sheet = sheet;
-		segs.add(seg);
-		
-		begin = seg.end;
-		sheet = surface.shiftSheets(sheet, block);
-	    }
-	    
-	    // And take care of the final segment
-	    seg = new PathSeg();
-	    seg.begin = begin;
-	    seg.end = end;
-	    seg.sheet = sheet;
-	    segs.add(seg);
-	    
-	    begin = seg.end;
-	}
-	return segs;
-    }
-	
-    /**
      * Returns list of points as would be understood by maple
      * 
      */
@@ -274,14 +164,24 @@ public class RiemannPath extends ArrayList<Point2D> {
 	s.append("[");
 	for (int i = 0; i < size(); ++i) {
 	    Point2D cur = get(i);
-	    s.append(maple.pointToString(cur));
+	    s.append(MapleUtils.pointToString(cur));
 	    if (i != size() - 1)
 		s.append(", ");
 	}
 	s.append("]");
 	return s.toString();
     }
-	
+
+    public Point2D getInitialYValue() {
+         return sheet;
+    }
+
+    public void setInitialYValue(Point2D newSheet) {
+        sheet = newSheet;
+    }
+
+    // And the necessary event crap...
+
     public void addPathChangeListener(PathChangeListener l) {
 	listeners.add(PathChangeListener.class, l);
     }
@@ -295,41 +195,107 @@ public class RiemannPath extends ArrayList<Point2D> {
 
 	for (int i = ls.length - 2; i >= 0; i -= 2) {
 	    if (ls[i] == PathChangeListener.class) {
-		((PathChangeListener) ls[i + 1]).pathChanged();
+		((PathChangeListener) ls[i + 1]).pathChanged(this);
 	    }
 	}
     }
-	
+
     protected void fireSheetChangedEvent() {
-	Object[] ls = listeners.getListenerList();
+        Object[] ls = listeners.getListenerList();
 
-	for (int i = ls.length - 2; i >= 0; i -= 2) {
-	    if (ls[i] == PathChangeListener.class) {
-		((PathChangeListener) ls[i + 1]).sheetChanged(sheetNum);
-	    }
-	}
+        for (int i = ls.length - 2; i >= 0; i -= 2) {
+            if (ls[i] == PathChangeListener.class) {
+        	((PathChangeListener) ls[i + 1]).sheetChanged(this);
+            }
+        }
     }
+   
+    // TODO: Remove all possible cruft after here.
 	
-    protected void fireAllSheetsChangedEvent() {
-	Object[] ls = listeners.getListenerList();
+    // /** Calculates sheet number from the current y-value of the sheet.
+    //  *  Stores result in cache for looking up later.
+    //  */
+    // private void updateSheetNum() {
+    //     if(isEmpty())
+    //         sheets = surface.definingSheets;
+    //     try {
+    //         sheets = surface.getSheets(this.get(0));
+    //         String pt = maple.pointToString(sheet);
+    //         String s = "best_match(%s, %s)[1]:";
+    //         s = String.format(s, pt, sheets);
+    //         Numeric num = (Numeric)maple.evaluate(s);
+    //         sheetNum =  num.intValue();
+    //     } catch(MapleException e) {
+    //         System.err.println("Couldn't put integer sheet number to point "+sheet);
+    //         System.err.println("Unexpected maple error: "+e);
+    //         System.err.println("Defaulting to sheet 1 for appearances' sake.");
+    //         sheetNum = 1;
+    //     } catch(SheetPropagationException e) {
+    //         System.err.println("Couldn't put integer sheet number to point "+sheet);
+    //         System.err.println("Defaulting to sheet 1.");
+    //         System.err.println(e);
+    //         sheetNum = 1;
+    //     }
 
-	for (int i = ls.length - 2; i >= 0; i -= 2) {
-	    if (ls[i] == PathChangeListener.class) {
-		((PathChangeListener) ls[i + 1]).allSheetsChanged();
-	    }
-	}
-    }
+    //     fireSheetChangedEvent();
+    // }
 
-    public class PathSeg {
-	public Point2D begin, end;
-	public int sheet;
-    }
+    // /** Makes use of cached sheet number for request */
+    // public int getInitialSheet() {
+    //     return sheetNum;
+    // }
 
+    // public void setInitialSheet(int sheetNum) throws IndexOutOfBoundsException {
+    //     if(isEmpty())
+    //         return;
+	
+    //     try {
+    //         List sheets = surface.getSheets(this.get(0));
+    //         sheet = maple.algToPoint(sheets.select(sheetNum));
+    //         this.sheetNum = sheetNum;
+    //         fireSheetChangedEvent();
+    //     } catch(MapleException e) {
+    //         throw new IndexOutOfBoundsException("Requested sheet number out of range: "+sheetNum);
+    //     } catch(SheetPropagationException e) {
+    //         System.err.println("Error setting sheet number of path at "+this.get(0));
+    //         System.err.println("Ignoring request.");
+    //         System.err.println(e);
+    //     }
+    // }
+
+
+    // public void setInitialSheetPoint(Point2D sheet) {
+    //     this.sheet = sheet;
+    //     if(!isEmpty()) {
+    //         updateSheetNum();
+    //         fireSheetChangedEvent();
+    //     }
+    // }
+	
+    // /** The list of y-values which identifies sheet numbers at the initial
+    //  *  point of this path. Result on an empty path is undefined.
+    //  *  @return l.select(1) is y-value of sheet 1 at first point...
+    //  */
+    // public List getSheets() {
+    //     return sheets;
+    // }
+	
+    // public Point2D getSheetByNum(int index) 
+    //     throws IndexOutOfBoundsException {
+    //     try {
+    //         List sheets = getSheets();
+    //         return maple.algToPoint(sheets.select(index));
+    //     } catch(MapleException e) {
+    //         throw new IndexOutOfBoundsException("Trying to find sheet "
+    //     					+ index + " at " + this.get(0));
+    //     }
+    // }
+	
+	
     EventListenerList listeners;
 
-    RiemannSurface surface;
-    MapleUtils maple;
-    List sheets;
+    // RiemannSurface surface;
+    // List sheets;
     Point2D sheet;
-    int sheetNum;
+    // int sheetNum;
 }

@@ -1,4 +1,4 @@
-/* Copyright 2009 Tim Northover
+/* Copyright 2010 Tim Northover
    
    This file is part of CyclePainter.
    
@@ -16,16 +16,17 @@
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
 */
 
+package cyclepainter.mathsstate;
 
+import java.awt.geom.Point2D;
 
-package cyclepainter.mathsstate.event;
+public class SheetedSeg {
+    public Point2D begin, end;
+    public int sheet;
 
-import java.util.EventListener;
-import cyclepainter.mathsstate.RiemannPath;
-
-public interface PathChangeListener extends EventListener {
-    /** Generic change in path */
-    public void pathChanged(RiemannPath path);
-    /** The initial point has been changed */
-    public void sheetChanged(RiemannPath path);
+    SheetedSeg(Point2D begin, Point2D end, int sheet) {
+        this.begin = begin;
+        this.end = end;
+        this.sheet = sheet;
+    }
 }

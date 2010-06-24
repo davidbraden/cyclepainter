@@ -41,6 +41,7 @@ public class PicState {
 	initialize();
 
 	surface.resetToDefault();
+        cutScheme = new CutScheme();
 	addDefaultPaths();
     }
 
@@ -77,6 +78,10 @@ public class PicState {
 	addPath("b[1]");
     }
 
+    public CutScheme getCutScheme() {
+        return cutScheme;
+    }
+
     public MapleUtils getMaple() {
 	return maple;
     }
@@ -97,7 +102,7 @@ public class PicState {
      *              Name of the path to add. Must be maple-valid.
      */
     public void addPath(String name) {
-	paths.put(name, new RiemannPath(surface));
+	paths.put(name, new RiemannPath());
 	firePathSetEvent();
     }
 
@@ -172,7 +177,7 @@ public class PicState {
 	    nameList.append(name);
 	    nameList.append('"');
 
-	    Point2D sheet = getPath(name).getInitialSheetPoint();
+	    Point2D sheet = getPath(name).getInitialYValue();
 	    sheetList.append(maple.pointToString(sheet));
 
 	    if (i.hasNext()) {
@@ -219,12 +224,12 @@ public class PicState {
 	    StringBuilder curTrack = null;
 
 	    // First get the path we'll be cutting up
-	    java.util.List<RiemannPath.PathSeg> segs = path.getSegments();
+	    java.util.List<SheetedSeg> segs = path.getSegments(new CutScheme());
 	    
 	    // First create the path
 	    out.println("\tpath p;");
 	    out.print("\tp := ");
-	    for(RiemannPath.PathSeg seg : segs) {
+	    for(SheetedSeg seg : segs) {
 		if (seg.begin.getX() < minX)
 		    minX = seg.begin.getX();
 		out.printf("(%f,%f)..", seg.begin.getX(), seg.begin.getY());
@@ -234,7 +239,7 @@ public class PicState {
 	    // Now work out where we need to split and do that. First seg gets an arrow.
 	    int curT = 0;
 	    String drawCmd = "drawarrow";
-	    for(RiemannPath.PathSeg seg : segs) {
+	    for(SheetedSeg seg : segs) {
 		out.printf("\t%s subpath (%d, %d) of p transformed trans withcolor colours%d;\n", 
 			       drawCmd, curT, curT+1, seg.sheet);
 		++curT;
@@ -332,9 +337,9 @@ public class PicState {
 	    for (int i = 1; i <= names.length(); ++i) {
 		String name = ((MString) names.select(i)).stringValue();
 		List points = (List) maple.evaluate(name + ":");
-		RiemannPath cur = new RiemannPath(surface);
+		RiemannPath cur = new RiemannPath();
 
-		cur.setInitialSheetPoint(maple.algToPoint(sheets.select(i)));
+		cur.setInitialYValue(maple.algToPoint(sheets.select(i)));
 		for (int j = 1; j <= points.length(); ++j) {
 		    cur.add(maple.algToPoint(points.select(j)));
 		}
@@ -396,6 +401,7 @@ public class PicState {
 
     public String description;
     RiemannSurface surface;
+    CutScheme cutScheme;
     MapleUtils maple;
     SortedMap<String, RiemannPath> paths;
 }

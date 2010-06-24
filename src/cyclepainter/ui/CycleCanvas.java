@@ -32,6 +32,10 @@ import java.awt.*;
 import java.awt.geom.*;
 import java.awt.event.*;
 
+import java.util.Collection;
+import java.util.ArrayList;
+import java.util.ListIterator;
+
 /**
  *
  * @author  tim
@@ -111,37 +115,41 @@ public class CycleCanvas extends JComponent
 	paintActivity(g);
     }
 
-    /** Paint the cuts from the surface's base point to each branch */
+    /** Paint the cuts following the CutScheme in effect */
     private void paintCuts(Graphics2D g) {
-	// Draw monodromy base point
-	Point2D basePoint = (Point2D)picState.getSurface().getBasePoint().clone();
-	if(basePoint != null) {
-	    mathsToJava.transform(basePoint, basePoint);
-	    drawDot(basePoint, g);
-	}
-	
+        // Draw each cut
+        Point2D minClip = javaToMaths.transform(new Point2D.Double(0,0), null);
+        Point2D maxClip = new Point2D.Double(getWidth(), getHeight());
+        maxClip = javaToMaths.transform(maxClip, null);
+
+        Collection<ArrayList<Point2D>> cuts 
+            = picState.getCutScheme().cutGraph(minClip, maxClip);
+
+        g.setPaint(Colours.CUT_COLOUR);
+
+        for (ArrayList<Point2D> cut : cuts) {
+            ListIterator<Point2D> i = cut.listIterator();
+            Point2D begin = mathsToJava.transform(i.next(), null), end;
+
+            while (i.hasNext()) {
+                end = mathsToJava.transform(i.next(), null);
+
+                g.draw(new Line2D.Double(begin, end));
+                begin = end;
+            }
+        }
+
 	// And draw the branch points, with cuts.
 	Point2D ours = new Point2D.Double();
 	Arc2D dot = new Arc2D.Double();
+
+        g.setPaint(Color.RED);
+
 	for(Point2D pt : picState.getSurface().getFiniteBranches()) {
 	    mathsToJava.transform(pt, ours);
-	
-	    if(basePoint != null) {
-		g.setPaint(Colours.CUT_COLOUR);
-		g.draw(new Line2D.Double(basePoint, ours));
-	    }
-	
-	    g.setPaint(Color.RED);
+		
 	    dot.setArcByCenter(ours.getX(), ours.getY(), 5, 0, 360, Arc2D.OPEN);
 	    g.fill(dot);
-	}
-	
-	// Blasted infinity. Cut goes off to left anyway -- fact derived
-	// from how maple treats infinity. Difficult to change
-	if(picState.getSurface().hasInfiniteBranch()) {
-	    Point2D end = new Point2D.Double(0, basePoint.getY());
-	    g.setPaint(Colours.CUT_COLOUR);
-	    g.draw(new Line2D.Double(basePoint, end));
 	}
     }
 
@@ -160,7 +168,7 @@ public class CycleCanvas extends JComponent
 	    // Now draw the lines...
 	    Point2D begin = new Point2D.Double();
 	    Point2D end = new Point2D.Double();
-	    for(RiemannPath.PathSeg seg: path.getSegments()) {
+	    for(SheetedSeg seg: path.getSegments(new CutScheme())) {
 		mathsToJava.transform(seg.begin, begin);
 		mathsToJava.transform(seg.end, end);
 		g.setColor(Colours.SHEET_COLOURS[seg.sheet % Colours.SHEET_COLOURS.length]);
@@ -262,11 +270,10 @@ public class CycleCanvas extends JComponent
 	repaint();
     }
 
-    public void activePathChanged(RiemannPath newActive) {
+    public void activePathChanged(RiemannPath oldActive, RiemannPath newActive) {
 	// We want to know about any updates to the active path.
 	if(activePath != null)
 	    activePath.removePathChangeListener(this);
-
 
         activePath = newActive;
 
@@ -280,15 +287,11 @@ public class CycleCanvas extends JComponent
     public void selectedPointChanged(Point2D newPt) {
     }
 	
-    public void sheetChanged(int newSheet) {
+    public void sheetChanged(RiemannPath path) {
 	repaint();
     }
-	
-    public void allSheetsChanged() {
-	// Doesn't affect rendering
-    }
-	
-    public void pathChanged() {
+
+    public void pathChanged(RiemannPath path) {
 	repaint();
     }
 
@@ -395,7 +398,7 @@ public class CycleCanvas extends JComponent
 
 	    tmp = new Point2D.Double();
 	    javaToMaths.transform(maths, tmp);
-	    activePath.displace(selectedPoint, tmp);
+	    activePath.displace(picState.getSurface(), selectedPoint, tmp);
 	    fireSelectedPointChanged(tmp, true);
 	    repaint();
 	    return;

@@ -120,7 +120,7 @@ public class MapleUtils {
     }
 
     /** Format a Point2D as a string in the complex plane */
-    public String pointToString(Point2D pt) {
+    public static String pointToString(Point2D pt) {
 	return String.format("%g%c%g*I", pt.getX(), pt.getY() >= 0 ? '+' : ' ',
 			     pt.getY());
     }

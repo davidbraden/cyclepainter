@@ -231,9 +231,15 @@ public class PathChooser extends JPanel
     }
     
     protected void fireActivePathChanged() {
-    	for(PathSelectionListener l : listeners) {
-    		l.activePathChanged(getActivePath());
-    	}
+        RiemannPath newPath = getActivePath();
+        
+        if (newPath != curPath) {
+            curPath = newPath;
+
+            for(PathSelectionListener l : listeners) {
+                l.activePathChanged(curPath, newPath);
+            }
+        }
     }
     
     // Things to do when list of names changes
@@ -250,6 +256,8 @@ public class PathChooser extends JPanel
     	contentsChanged(e);
     }
     
+    private RiemannPath curPath;
+
     private JTextField newName;
     private JButton addPath;
     private JButton delPath;

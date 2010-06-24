@@ -26,5 +26,5 @@ import java.awt.geom.Point2D;
 
 public interface PathSelectionListener extends EventListener {
     public void visiblePathsChanged(List<RiemannPath> newVisible);
-    public void activePathChanged(RiemannPath newActive);
+    public void activePathChanged(RiemannPath oldActive, RiemannPath newActive);
 }
