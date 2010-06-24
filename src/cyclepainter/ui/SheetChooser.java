@@ -22,6 +22,7 @@ import cyclepainter.mapleutil.*;
 import cyclepainter.ui.event.*;
 import cyclepainter.mathsstate.event.*;
 import cyclepainter.mathsstate.*;
+import cyclepainter.exceptions.SheetPropagationException;
 
 import java.awt.geom.Point2D;
 import java.awt.Dimension;
@@ -61,7 +62,7 @@ public class SheetChooser extends JPanel
 	    };
 	add(combo);
 
-	dataDisplay = new SheetsDisplay(picState.getSurface());
+	dataDisplay = new SheetsDisplay(picState);
 	JButton disp = new JButton("Sheets data");
 	disp.addActionListener(new ActionListener() {
 		public void actionPerformed(ActionEvent e) {
@@ -107,15 +108,21 @@ public class SheetChooser extends JPanel
     public void pathChanged(RiemannPath path) {
 	if (path == null || path.size() == 0) {
 	    sheetsX = new Point2D.Double(0, 0);
-	} else if (!sheetsX.equals(path.get(0))) {
+	} else if (!path.get(0).equals(sheetsX)) {
             sheetsX = path.get(0);
         }
 	sheetDataModel.sheetsChanged();
     }
 	
     public void sheetChanged(RiemannPath path) {
-	combo.setSelectedIndex(picState.getCutScheme().
-                               getSheet(sheetsX, path.getInitialYValue()));
+	int sheet = 0;
+	try {
+	    sheet = picState.getCutScheme().getSheet(sheetsX, path.getInitialYValue());
+	} catch(SheetPropagationException e) {
+	    System.err.println("Could not determine new sheet of path");
+	}
+	
+	combo.setSelectedIndex(sheet);
     }
 	
     public void allSheetsChanged() {        
@@ -147,7 +154,13 @@ public class SheetChooser extends JPanel
             return size;
 	}
 	public Object getElementAt(int index) {
-	    Point2D sheet = picState.getCutScheme().getYValue(sheetsX, index);
+	    Point2D sheet = null;
+	    try {
+		sheet = picState.getCutScheme().getYValue(sheetsX, index);
+	    } catch(SheetPropagationException e) {
+		System.err.println("Error propagating sheets to beginning of path");
+		sheet = new Point2D.Double(0, 0);
+	    }
 
             // Keep a cache of the analytic values we're storing.
             yValues[index] = sheet;

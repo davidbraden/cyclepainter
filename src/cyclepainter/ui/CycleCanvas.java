@@ -122,21 +122,16 @@ public class CycleCanvas extends JComponent
         Point2D maxClip = new Point2D.Double(getWidth(), getHeight());
         maxClip = javaToMaths.transform(maxClip, null);
 
-        Collection<ArrayList<Point2D>> cuts 
+        Collection<Line2D> cuts 
             = picState.getCutScheme().cutGraph(minClip, maxClip);
 
         g.setPaint(Colours.CUT_COLOUR);
 
-        for (ArrayList<Point2D> cut : cuts) {
-            ListIterator<Point2D> i = cut.listIterator();
-            Point2D begin = mathsToJava.transform(i.next(), null), end;
+        for (Line2D cut : cuts) {
+	    Point2D begin = mathsToJava.transform(cut.getP1(), null);
+            Point2D end = mathsToJava.transform(cut.getP2(), null);
 
-            while (i.hasNext()) {
-                end = mathsToJava.transform(i.next(), null);
-
-                g.draw(new Line2D.Double(begin, end));
-                begin = end;
-            }
+	    g.draw(new Line2D.Double(begin, end));
         }
 
 	// And draw the branch points, with cuts.
@@ -168,7 +163,7 @@ public class CycleCanvas extends JComponent
 	    // Now draw the lines...
 	    Point2D begin = new Point2D.Double();
 	    Point2D end = new Point2D.Double();
-	    for(SheetedSeg seg: path.getSegments(new CutScheme())) {
+	    for(SheetedSeg seg: path.getSegments(picState.getCutScheme())) {
 		mathsToJava.transform(seg.begin, begin);
 		mathsToJava.transform(seg.end, end);
 		g.setColor(Colours.SHEET_COLOURS[seg.sheet % Colours.SHEET_COLOURS.length]);

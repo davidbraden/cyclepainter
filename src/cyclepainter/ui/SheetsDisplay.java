@@ -44,12 +44,12 @@ public class SheetsDisplay extends javax.swing.JFrame
 	       SelectedPointListener {
     Icon pics[];
 
-    public SheetsDisplay(RiemannSurface surface) {
-	this.surface = surface;
+    public SheetsDisplay(PicState picState) {
+	this.picState = picState;
 	selected = null;
-	maple = surface.getMaple();
+	maple = picState.getSurface().getMaple();
 	
-	surface.addSurfaceChangeListener(this);
+	picState.getSurface().addSurfaceChangeListener(this);
 
 	initComponents();
 	displayData();
@@ -90,10 +90,10 @@ public class SheetsDisplay extends javax.swing.JFrame
 	Container contents = getContentPane();
 	contents.removeAll();
 
-	Point2D base = surface.getSheetsBase();
-	List sheets;
+	Point2D base = picState.getSurface().getSheetsBase();
+	java.util.List<Point2D> sheets;
 	try {
-	    sheets = surface.getSheets(base);
+	    sheets = picState.getCutScheme().getAllSheets(base);
 	} catch(SheetPropagationException e) {
 	    System.err.println("Unable find sheets even at surface's own base point");
 	    System.err.println("This shouldn't happen");
@@ -102,52 +102,46 @@ public class SheetsDisplay extends javax.swing.JFrame
 
 	contents.add(new JLabel("Sheets based at: "+maple.pointToString(base)));
 
-	try {
-	    for(int i = 1; i <= sheets.length(); ++i) {
-		JLabel info;
-		Algebraic yval = sheets.select(i);
-		String text = String.format("%d: %s", i, yval);
 
-		JTextField lbl = new JTextField(text);
-		lbl.setEditable(false);
-		lbl.setBorder(null);
-		lbl.setForeground(UIManager.getColor("Label.foreground"));
-		lbl.setFont(UIManager.getFont("Label.font"));
+	int i = 0;
+	for (Point2D yval : sheets) {
+	    JLabel info;
+	    String text = String.format("%d: %s", i, maple.pointToString(yval));
+
+	    JTextField lbl = new JTextField(text);
+	    lbl.setEditable(false);
+	    lbl.setBorder(null);
+	    lbl.setForeground(UIManager.getColor("Label.foreground"));
+	    lbl.setFont(UIManager.getFont("Label.font"));
 	
-		Box b = new Box(BoxLayout.X_AXIS);
-		b.add(new JLabel(pics[i % pics.length]));
-		b.add(lbl);
+	    Box b = new Box(BoxLayout.X_AXIS);
+	    b.add(new JLabel(pics[i % pics.length]));
+	    b.add(lbl);
 
-		contents.add(b);
-	    }
-
-	    selLabel = new JLabel("Selected point");
-	    contents.add(selLabel);
-
-	    selSheets = new ArrayList<JTextField>(sheets.length());
-	    for(int i = 1; i <= sheets.length(); ++i) {
-		JLabel cur = new JLabel(pics[i % pics.length]);
-
-		JTextField lbl = new JTextField();
-		lbl.setEditable(false);
-		lbl.setBorder(null);
-		lbl.setForeground(UIManager.getColor("Label.foreground"));
-		lbl.setFont(UIManager.getFont("Label.font"));
-		selSheets.add(lbl);
-
-		Box b = new Box(BoxLayout.X_AXIS);
-		b.add(cur);
-		b.add(lbl);
-
-		contents.add(b);
-	    }	    
-			 
-	} catch(MapleException e) {
-	    // Shouldn't get here: we only loop through fixed List
-	    // from 1 to list.length()!
-	    System.err.println("Couldn't determine sheets for display");
+	    contents.add(b);
+	    ++i;
 	}
 
+	selLabel = new JLabel("Selected point");
+	contents.add(selLabel);
+
+	selSheets = new ArrayList<JTextField>(sheets.size());
+	for(i = 0; i < sheets.size(); ++i) {
+	    JLabel cur = new JLabel(pics[i % pics.length]);
+
+	    JTextField lbl = new JTextField();
+	    lbl.setEditable(false);
+	    lbl.setBorder(null);
+	    lbl.setForeground(UIManager.getColor("Label.foreground"));
+	    lbl.setFont(UIManager.getFont("Label.font"));
+	    selSheets.add(lbl);
+
+	    Box b = new Box(BoxLayout.X_AXIS);
+	    b.add(cur);
+	    b.add(lbl);
+
+	    contents.add(b);
+	}	    
 
 	contents.add(close);
 	pack();
@@ -157,6 +151,7 @@ public class SheetsDisplay extends javax.swing.JFrame
 	// Really does need to recreate labels. Number of sheets may change.
 	displayData();
     }
+
 
     public void selectedPointChanged(Point2D newPt, boolean rapid) {
 	if(newPt == null) {
@@ -170,23 +165,24 @@ public class SheetsDisplay extends javax.swing.JFrame
 	    selLabel.setText("Selected point: "+maple.pointToString(newPt));
 	    
 	    try {
-		List sheets = surface.getSheets(newPt);
+		java.util.List<Point2D> sheets 
+		    = picState.getCutScheme().getAllSheets(newPt);
 
-		for(int i = 1; i <= sheets.length(); ++i) {
-		    JTextField cur = selSheets.get(i-1);
-		    cur.setText(i+": "+sheets.select(i).toString());
+		int i = 0;
+		for (Point2D sheet : sheets) {
+		    JTextField cur = selSheets.get(i);
+		    cur.setText(String.format("%d: %s", i, maple.pointToString(sheet)));
+		    
+		    ++i;
 		}
 	    } catch(SheetPropagationException e) {
 		System.err.println("Unable to calculate sheets at selected point");
-		System.err.println(e);
-	    } catch(MapleException e) {
-		System.err.println("Unexpected maple error indexing known list");
 		System.err.println(e);
 	    }
 	}
     }
 
-    RiemannSurface surface;
+    PicState picState;
     JButton close;
     Point2D selected;
     ArrayList<JTextField> selSheets;

@@ -92,11 +92,12 @@ public class RiemannSurface {
     public void setSurface(String f, String x, String y, 
 			   Point2D basePoint, Point2D sheetsBase) throws 
 			       SetSurfaceException {
-	String s;
-	HashMap<Point2D, Algebraic> newMonodromy;
+	Algebraic newMonodromy;
+	HashSet<Point2D> newBranches;
 	List newDefiningSheets;
 	Algebraic newInfMonodromy;
-	Point2D newBasePoint;
+	Point2D newBasePoint = basePoint;
+	String s;
 
 	try {
 	    // First calculate the monodromy
@@ -106,8 +107,16 @@ public class RiemannSurface {
 	    maple.evaluate("forget(`algcurves/Monodromy`):");
 	    s = String.format("mono := `algcurves/monodromy`(%s, %s, %s);", f,
 			      x, y);
-	    maple.evaluate(s);
+	    newMonodromy = maple.evaluate(s);
 	    maple.evaluate("use_base := 'use_base':");
+	    
+	    List mapBranches = (List)maple.evaluate("map(x->x[1], mono[3]):");
+	    newBranches = new HashSet<Point2D>();
+
+	    for (int i = 1; i <= mapBranches.length(); ++i)
+		newBranches.add(maple.algToPoint(mapBranches.select(i)));
+
+	    newBasePoint = maple.algToPoint(maple.evaluate("mono[1]:"));
 	} catch(MapleException e) {
 	    throw new SetSurfaceException("Maple's monodromy calculation failed.\n"
 					  +"Surface change aborted.\n"+e);
@@ -128,44 +137,12 @@ public class RiemannSurface {
 	       +e);
 	}
 
-	try {
-	    // Work out the effect of crossing each branch cut
-	    s = String.format("cutmono := mono_to_shift(mono[3], %s, %s):", 
-			      maple.pointToString(basePoint), 
-			      maple.pointToString(sheetsBase));
-	    maple.evaluate(s);
-
-	    // treating infinity properly
-	    List inf = (List) maple.evaluate("select(x->x[1]=infinity, cutmono):");
-	    newMonodromy = new HashMap<Point2D, Algebraic>();
-	    if (inf.length() > 0) {
-		List item = (List) inf.select(1);
-		newMonodromy.put(INFINITY, item.select(2));
-	    }
-
-	    List mapBs = (List) maple.evaluate("remove(x -> x[1]=infinity, cutmono):");
-	    for (int i = 1; i <= mapBs.length(); ++i) {
-		List item = (List) mapBs.select(i);
-		newMonodromy.put(maple.algToPoint(item.select(1)), item.select(2));
-	    }
-	    mapBs.dispose();
-
-	    // And the basePoint
-	    newBasePoint = maple.algToPoint(maple.evaluate("mono[1]:"));
-
-	    maple.evaluate("mono:='mono': cutmono:='cutmono':");
-	} catch (MapleException e) {
-	    throw new SetSurfaceException(
-		 "Unexpected error converting canonical sheets to permutation "
-		 +"for each cut.\n"
-		 +e);
-	}
-
 	// Do this stuff at end so we can revert before if necessary
 	this.f = f;
 	this.x = x;
 	this.y = y;
 	this.sheetsBase = sheetsBase;
+	this.branches = newBranches;
 	this.monodromy = newMonodromy;
 	this.basePoint = newBasePoint;
 	this.definingSheets = newDefiningSheets;
@@ -198,15 +175,25 @@ public class RiemannSurface {
 	return String.format("Record('f'=%s, 'x'=%s, 'y'=%s)", f, x, y);
     }
 
+    public List getDefiningSheets() {
+	return definingSheets;
+    }
+
     /** The finite branch points of the curve */
     public Set<Point2D> getFiniteBranches() {
-	Set<Point2D> branches = new HashSet<Point2D>(monodromy.keySet());
+	if (this.branches == null)
+	    return new HashSet<Point2D>();
+
+	Set<Point2D> branches = new HashSet<Point2D>(this.branches);
 	branches.remove(INFINITY);
 	return branches;
     }
 
     public boolean hasInfiniteBranch() {
-	return monodromy.containsKey(INFINITY);
+	if (branches == null)
+	    return false;
+
+	return branches.contains(INFINITY);
     }
 
     /** Gives the base point used in monodromy calculations. **/
@@ -214,146 +201,10 @@ public class RiemannSurface {
 	return basePoint;
     }
 
-    /** Work out how crossing a given branch cut in a given direction
-     *  changes the sheet.
-     *
-     *  @param sheet
-     *         Sheet before the branch cut
-     *  @param descr
-     *         Description of the branch cut and direction we're
-     *         crossing.
-     *  @return Sheet after the cut.
-     */
-    int shiftSheets(int sheet, SheetChange descr) {
-	try {
-	    Algebraic perm;
-	    String cmd;
-	    if (descr.dir == 1)
-		cmd = "apply_perm(%s, %d):";
-	    else
-		cmd = "apply_perm(map(ListTools[Reverse], %s), %d):";
-			
-	    perm = monodromy.get(descr.branch);
-			
-	    cmd = String.format(cmd, perm.toString(), sheet);
-	    Algebraic newSheet = maple.evaluate(cmd);
-	    sheet = ((Numeric) newSheet).intValue();
-	} catch (MapleException e) {
-	    System.err.println("Unexpected error applying known permutation to number");
-	    System.err.println("Unable to calculate sheet change across a single, known cut");
-	    System.err.println("Path is an unknown state, but continuing");
-	}
-	// Still initial if maple exception occurred
-	return sheet;
-    }
-
     public Point2D getSheetsBase() {
 	return this.sheetsBase;
     }
 	
-    /**
-     * Calculate which sheet corresponds to which y-value at a given point
-     * @param pt
-     *        Where we want to know about
-     * @return
-     *        nth entry is y-value on sheet n.
-     */
-    public List getSheets(Point2D pt) throws SheetPropagationException {
-	// We need to analytically continue
-	List sheets = definingSheets;
-	Point2D from = sheetsBase;
-	try {
-	    sheets = maple.propagateSheets(getCurveString(), sheets, from, pt);
-			
-	    // Now we have to apply the sheet changes of any cuts we've crossed between
-	    // from and to.
-	    Collection<SheetChange> cuts = splitSegment(from, pt);
-	    Procedure permute_list = (Procedure)maple.evaluate("op(permute_list):");
-	    for(SheetChange cut : cuts) {
-		Algebraic perm = monodromy.get(cut.branch);
-		if(cut.dir == -1) {
-		    String cmd = String.format("map(ListTools[Reverse], %s):", perm);
-		    perm = maple.evaluate(cmd);
-		}
-
-		sheets = (List)permute_list.execute(new Algebraic[] {sheets, perm});
-	    }
-	} catch(MapleException e) {
-	    System.err.println("Couldn't update sheet order by analytic continuation");
-	    System.err.println("Unexpected error. Not related to continuation");
-	    System.err.println(e);
-	} 
-	return sheets;
-    }
-	
-    /** Split a segment at each cut it crosses.
-     * 
-     * @param begin
-     * @param end
-     * @return List specifying each branch cut, sorted by distance along path
-     */
-	
-    Collection<SheetChange> splitSegment(Point2D begin, Point2D end) {
-	Line2D segment = new Line2D.Double(begin, end);
-	TreeMap<Double, SheetChange> isectPoints = new TreeMap<Double, SheetChange>();
-		
-	ArrayList<Line2D> branchLines = new ArrayList<Line2D>();
-	for (Point2D pt : getFiniteBranches()) {
-	    branchLines.add(new Line2D.Double(getBasePoint(), pt));
-	}
-
-	// Find where the line needs to be cut and order by distance
-	// from the beginning
-	for (Line2D cut : branchLines) {
-	    if (cut.intersectsLine(segment)) {
-		SheetChange shift = intersection(segment, cut);
-		if(shift.equals(begin))
-		    continue;
-		shift.branch = cut.getP2();
-		isectPoints.put(shift.isection.distance(begin), shift);
-	    }
-	}
-	// And the infinite cut if necessary
-	if(hasInfiniteBranch()) {
-	    Point2D basePoint = getBasePoint();
-	    Line2D cut = new Line2D.Double(basePoint,
-					   new Point2D.Double(Double.NEGATIVE_INFINITY, basePoint.getY())
-					   );
-	    if(cut.intersectsLine(segment)) {
-		// Special code here since infinities are involved.
-		double t = (basePoint.getY()-begin.getY())/(end.getY()-begin.getY());
-		double x = begin.getX()+t*(end.getX()-begin.getX());
-		Point2D isection = new Point2D.Double(x, basePoint.getY());
-
-		SheetChange sc = new SheetChange(RiemannSurface.INFINITY, isection, 
-						 begin.getY() > basePoint.getY() ? -1 : 1);
-		isectPoints.put(isection.distance(begin), sc);
-	    }
-	}
-	return isectPoints.values();
-    }
-	
-    /**
-     * Returns the point of intersection of l1 and l2, considered as lines.
-     * 
-     * @param l1
-     * @param l2
-     * @return
-     */
-    SheetChange intersection(Line2D l1, Line2D l2) {
-	double num = (l2.getX1() - l1.getX1()) * (l2.getY2() - l2.getY1());
-	num -= (l2.getY1() - l1.getY1()) * (l2.getX2() - l2.getX1());
-	double denom = (l1.getX2() - l1.getX1()) * (l2.getY2() - l2.getY1());
-	denom -= (l1.getY2() - l1.getY1()) * (l2.getX2() - l2.getX1());
-	double t = num / denom;
-
-	double x = l1.getX1() + t * (l1.getX2() - l1.getX1());
-	double y = l1.getY1() + t * (l1.getY2() - l1.getY1());
-
-	int dir = l1.relativeCCW(l2.getP1());
-
-	return new SheetChange(new Point2D.Double(x, y), dir);
-    }
 
     public void addSurfaceChangeListener(SurfaceChangeListener l) {
 	listeners.add(SurfaceChangeListener.class, l);
@@ -379,7 +230,8 @@ public class RiemannSurface {
 
     // Surface data
     String x, y, f;
-    HashMap<Point2D, Algebraic> monodromy;
+    Set<Point2D> branches;
+    Algebraic monodromy;
     Point2D basePoint;
 	
     List definingSheets;

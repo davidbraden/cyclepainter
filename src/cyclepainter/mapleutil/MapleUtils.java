@@ -149,6 +149,8 @@ public class MapleUtils {
 	    ComplexNumeric z = (ComplexNumeric) pt;
 	    return new Point2D.Double(z.realPart().doubleValue(), z
 				      .imaginaryPart().doubleValue());
+	} else if (pt instanceof Name && pt.toString().equals("infinity")) {
+	    return new Point2D.Double(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
 	} else {
 	    Numeric z = (Numeric) pt;
 	    return new Point2D.Double(z.doubleValue(), 0.0);

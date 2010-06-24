@@ -1,4 +1,4 @@
-/* Copyright 2009 Tim Northover
+/* Copyright 2009, 2010 Tim Northover
    
    This file is part of CyclePainter.
    
@@ -23,6 +23,7 @@ package cyclepainter.mathsstate;
 import cyclepainter.exceptions.*;
 import cyclepainter.mapleutil.*;
 import cyclepainter.mathsstate.event.*;
+import cyclepainter.Colours;
 
 import java.util.*;
 import javax.swing.event.*;
@@ -63,6 +64,8 @@ public class RiemannPath extends ArrayList<Point2D> {
 	super.add(pt);
 
 	firePathChangedEvent();
+	if (size() == 1)
+	    fireSheetChangedEvent();
 	return true;
     }
 
@@ -78,17 +81,32 @@ public class RiemannPath extends ArrayList<Point2D> {
         ListIterator<Point2D> i = this.listIterator();
 
         Point2D begin = i.next(), end;
-        int sheetNum = cuts.getSheet(begin, sheet);
+	int sheetNum = 0;
 
-        while (i.hasNext()) {
-            end = i.next();
-            allSegs.addAll(cuts.splitSegment(begin, end, sheetNum));
+	try {
+	    sheetNum = cuts.getSheet(begin, sheet);
+	} catch(SheetPropagationException e) {
+	    System.err.println("Error propagating sheets while splitting path at cuts");
+	    
+	    while (i.hasNext()) {
+		end = i.next();
+		allSegs.add(new SheetedSeg(begin, end, Colours.MAX_COLOUR));
 
-            begin = end;
-            sheetNum = allSegs.getLast().sheet;            
-        }
+		begin = end;
+	    }
 
-        return allSegs;
+	    return allSegs;
+	}
+
+	while (i.hasNext()) {
+	    end = i.next();
+	    allSegs.addAll(cuts.splitSegment(begin, end, sheetNum));
+	    
+	    begin = end;
+	    sheetNum = allSegs.getLast().sheet;            
+	}
+    
+	return allSegs;   
     }
 
     /**
@@ -178,6 +196,8 @@ public class RiemannPath extends ArrayList<Point2D> {
 
     public void setInitialYValue(Point2D newSheet) {
         sheet = newSheet;
+	
+	fireSheetChangedEvent();
     }
 
     // And the necessary event crap...

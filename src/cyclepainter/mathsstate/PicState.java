@@ -40,8 +40,6 @@ public class PicState {
     public PicState() throws MapleInitException {
 	initialize();
 
-	surface.resetToDefault();
-        cutScheme = new CutScheme();
 	addDefaultPaths();
     }
 
@@ -66,10 +64,17 @@ public class PicState {
 
 	description = "";
 
+	maple = MapleUtils.connect();
+
 	surface = new RiemannSurface();
+	surface.resetToDefault();
+       
+	cutScheme = new RadialCutScheme();
+	cutScheme.surfaceChanged(surface);
+	surface.addSurfaceChangeListener(cutScheme);
+
 	paths = new TreeMap<String, RiemannPath>();
 
-	maple = MapleUtils.connect();
     }
 
     private void addDefaultPaths() {
@@ -224,7 +229,7 @@ public class PicState {
 	    StringBuilder curTrack = null;
 
 	    // First get the path we'll be cutting up
-	    java.util.List<SheetedSeg> segs = path.getSegments(new CutScheme());
+	    java.util.List<SheetedSeg> segs = path.getSegments(cutScheme);
 	    
 	    // First create the path
 	    out.println("\tpath p;");
