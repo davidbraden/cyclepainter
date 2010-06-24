@@ -105,15 +105,12 @@ public class SheetChooser extends JPanel
     }
 	
     public void pathChanged(RiemannPath path) {
-        if (path.size() == 0) {
-            sheetDataModel.sheetsChanged();
-            return;
-        }
-
-        if (!sheetsX.equals(path.get(0))) {
+	if (path == null || path.size() == 0) {
+	    sheetsX = new Point2D.Double(0, 0);
+	} else if (!sheetsX.equals(path.get(0))) {
             sheetsX = path.get(0);
-            sheetDataModel.sheetsChanged();
         }
+	sheetDataModel.sheetsChanged();
     }
 	
     public void sheetChanged(RiemannPath path) {
@@ -144,8 +141,8 @@ public class SheetChooser extends JPanel
             
             size = picState.getCutScheme().numSheets();
 
-            if (yValues == null || size != yValues.size())
-                yValues = new ArrayList<Point2D>(size);
+            if (yValues == null || size != yValues.length)
+                yValues = new Point2D[size];
 
             return size;
 	}
@@ -153,7 +150,7 @@ public class SheetChooser extends JPanel
 	    Point2D sheet = picState.getCutScheme().getYValue(sheetsX, index);
 
             // Keep a cache of the analytic values we're storing.
-            yValues.set(index, sheet);
+            yValues[index] = sheet;
 
 	    String f = "%d: %.3g+%.3gi";
 	    f = String.format(f, index+1, sheet.getX(), sheet.getY());
@@ -173,7 +170,7 @@ public class SheetChooser extends JPanel
 
 	    if(m.lookingAt()) {
                 int sheetNum = Integer.parseInt(m.group(1)) - 1;
-                path.setInitialYValue(yValues.get(sheetNum));
+                path.setInitialYValue(yValues[sheetNum]);
             }
 	}
 		
@@ -181,6 +178,6 @@ public class SheetChooser extends JPanel
 	    fireContentsChanged(this, 0, getSize()-1);
 	}
 		
-        ArrayList<Point2D> yValues;
+        Point2D[] yValues;
     }
 }
