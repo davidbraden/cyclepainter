@@ -14,9 +14,8 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
+ */
 package cyclepainter.mathsstate.event;
-
 
 import cyclepainter.mathsstate.PicState;
 

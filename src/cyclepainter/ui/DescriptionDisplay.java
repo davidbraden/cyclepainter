@@ -14,9 +14,8 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
+ */
 package cyclepainter.ui;
-
 
 import cyclepainter.mathsstate.event.*;
 import cyclepainter.mathsstate.*;
@@ -24,41 +23,43 @@ import cyclepainter.mathsstate.*;
 import javax.swing.*;
 import javax.swing.event.*;
 
-
-
-public class DescriptionDisplay extends JPanel 
-    implements ResetListener {
+public class DescriptionDisplay extends JPanel implements ResetListener {
     public DescriptionDisplay(PicState picState) {
-	this.picState = picState;
-	
-	initComponents();
-	this.picState.addResetListener(this);
+        this.picState = picState;
+
+        initComponents();
+        this.picState.addResetListener(this);
     }
-   
+
     private void initComponents() {
-	descrLabel = new JLabel("Description: ");
-	descrText = new JTextField(picState.description);
-	descrText.getDocument().
-	    addDocumentListener(new DocumentListener() {
-		    public void changedUpdate(DocumentEvent e) {
-			picState.description = descrText.getText();
-		    }
-		    public void removeUpdate(DocumentEvent e) {
-			picState.description = descrText.getText();
-		    }
-		    public void insertUpdate(DocumentEvent e) {
-			picState.description = descrText.getText();
-		    }
-		});
-	
-	setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-	add(descrLabel);
-	add(descrText);
+        descrLabel = new JLabel("Description: ");
+        descrText = new JTextField(picState.description);
+        descrText.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                picState.description = descrText.getText();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                picState.description = descrText.getText();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                picState.description = descrText.getText();
+            }
+        });
+
+        setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+        add(descrLabel);
+        add(descrText);
 
     }
 
+    @Override
     public void dataReset(PicState surf) {
-	descrText.setText(surf.description);
+        descrText.setText(surf.description);
     }
 
     PicState picState;

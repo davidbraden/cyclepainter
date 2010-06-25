@@ -14,14 +14,10 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
-
-
+ */
 
 package cyclepainter.ui;
 
-import cyclepainter.ui.event.*;
-import cyclepainter.ui.*;
 import cyclepainter.mathsstate.*;
 import cyclepainter.exceptions.*;
 
@@ -33,62 +29,62 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.*;
 
 /**
- * Create all the UI components and perform any last minute linking needed.
- * Also handle any menu operations.
- * @author  tim
+ * Create all the UI components and perform any last minute linking needed. Also
+ * handle any menu operations.
+ * 
+ * @author tim
  */
 public class MainWindow extends javax.swing.JFrame {
     static final long serialVersionUID = 1;
     static final String TITLE = "Riemann surface cycle painter";
-    static final FileFilter PIC_FILE =
-	new FileNameExtensionFilter("Native PIC", "pic");
-    static final FileFilter MP_FILE = 
-	new FileNameExtensionFilter("Metapost", "mp");
+    static final FileFilter PIC_FILE = new FileNameExtensionFilter(
+            "Native PIC", "pic");
+    static final FileFilter MP_FILE = new FileNameExtensionFilter("Metapost",
+            "mp");
 
     /** Creates new form MainWindow */
     public MainWindow(PicState picState) throws MapleInitException {
-    	this.picState = picState;
+        this.picState = picState;
 
-	picDialog = new JFileChooser(System.getProperty("user.dir"));
-	picDialog.setFileFilter(PIC_FILE);
+        picDialog = new JFileChooser(System.getProperty("user.dir"));
+        picDialog.setFileFilter(PIC_FILE);
 
-	mpDialog = new JFileChooser(System.getProperty("user.dir"));
-	mpDialog.setFileFilter(MP_FILE);
+        mpDialog = new JFileChooser(System.getProperty("user.dir"));
+        mpDialog.setFileFilter(MP_FILE);
 
         initComponents();
-	initMenu();
+        initMenu();
     }
 
-    /** This method is called from within the constructor to
-     * initialise the form.
+    /**
+     * This method is called from within the constructor to initialise the form.
      */
     private void initComponents() throws MapleInitException {
         GridBagConstraints gbc;
-        
+
         setTitle(TITLE);
 
-	descrDisplay = new DescriptionDisplay(picState);
+        descrDisplay = new DescriptionDisplay(picState);
         surfaceChooser = new SurfaceChooser(picState.getSurface());
         cycleCanvas = new CycleCanvas(picState);
         pathChooser = new PathChooser(picState);
-	sheetChooser = new SheetChooser(picState);
+        sheetChooser = new SheetChooser(picState);
 
-	regionChooser = new RegionChooser();
-	    
+        regionChooser = new RegionChooser();
 
-	pathChooser.addPathSelectionListener(cycleCanvas);
-	pathChooser.addPathSelectionListener(sheetChooser);
-	regionChooser.addRegionListener(cycleCanvas);
-	cycleCanvas.addSelectedPointListener(sheetChooser.getSheetsDisplay());
+        pathChooser.addPathSelectionListener(cycleCanvas);
+        pathChooser.addPathSelectionListener(sheetChooser);
+        regionChooser.addRegionListener(cycleCanvas);
+        cycleCanvas.addSelectedPointListener(sheetChooser.getSheetsDisplay());
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new java.awt.GridBagLayout());
-        
+
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         getContentPane().add(pathChooser, gbc);
-        
+
         gbc = new java.awt.GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 1;
@@ -97,180 +93,185 @@ public class MainWindow extends javax.swing.JFrame {
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 2;
-	getContentPane().add(regionChooser, gbc);
+        getContentPane().add(regionChooser, gbc);
 
         gbc = new java.awt.GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 3;
         getContentPane().add(surfaceChooser, gbc);
 
-	gbc = new java.awt.GridBagConstraints();
-	gbc.gridx = 1;
-	gbc.gridy = 4;
-	gbc.weightx = 1;
-	gbc.fill = GridBagConstraints.HORIZONTAL;
-	getContentPane().add(descrDisplay, gbc);
+        gbc = new java.awt.GridBagConstraints();
+        gbc.gridx = 1;
+        gbc.gridy = 4;
+        gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        getContentPane().add(descrDisplay, gbc);
 
         gbc = new java.awt.GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;
-	gbc.weightx = 1;
-	gbc.weighty = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
         gbc.gridheight = 3;
-	gbc.fill = GridBagConstraints.BOTH;
+        gbc.fill = GridBagConstraints.BOTH;
         getContentPane().add(cycleCanvas, gbc);
-        
+
         pack();
     }
 
     void initMenu() {
-	JMenuBar bar = new JMenuBar();
+        JMenuBar bar = new JMenuBar();
 
-	bar.add(initFileMenu());
+        bar.add(initFileMenu());
 
-	bar.add(initCutSchemeMenu());
-	
-	setJMenuBar(bar);
+        bar.add(initCutSchemeMenu());
+
+        setJMenuBar(bar);
     }
 
     JMenu initFileMenu() {
-	JMenu file = new JMenu("File");
+        JMenu file = new JMenu("File");
 
-	Action ac = new AbstractAction("New") {
-		public void actionPerformed(ActionEvent e) {
+        Action ac = new AbstractAction("New") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
 
-		    if(confirm("New file will overwrite current data. Proceed?")) {
-			filename = null;
-			setTitle(TITLE);
-			picState.resetToDefault();
-		    }
-		}
-	    };
-	file.add(ac);
+                if (confirm("New file will overwrite current data. Proceed?")) {
+                    filename = null;
+                    setTitle(TITLE);
+                    picState.resetToDefault();
+                }
+            }
+        };
+        file.add(ac);
 
-	ac = new AbstractAction("Open") {
-		public void actionPerformed(ActionEvent e) {
-		    if(picDialog.showOpenDialog(null) != JFileChooser.APPROVE_OPTION
-		       || ! confirm("Opening will discard unsaved changes. Proceed?"))
-			return;
-		    try {
-			filename = picDialog.getSelectedFile();
-			FileInputStream in = new FileInputStream(filename);
+        ac = new AbstractAction("Open") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (picDialog.showOpenDialog(null) != JFileChooser.APPROVE_OPTION
+                        || !confirm("Opening will discard unsaved changes. Proceed?"))
+                    return;
+                try {
+                    filename = picDialog.getSelectedFile();
+                    FileInputStream in = new FileInputStream(filename);
 
-			picState.readData(in);
-			setTitle(TITLE+" - "+filename.getName());
-			
-		    } catch(FileNotFoundException ex) {
-			errorMsg("File not found on open: "+ex,
-				 "Error Opening File");
-		    } catch(IOException ex) {
-			errorMsg("I/O error reading file "+filename+"\n"+ex,
-				 "Error Reading File");
-		    } catch(PicFormatException ex) {
-			errorMsg("Incorrect .pic file format"+filename+".\n"
-				 +ex,
-				 "Error in File Format");
-		    } catch(SetSurfaceException ex) {
-			errorMsg("Surface described in "+filename+" not usable\n"
-				 +ex,
-				 "Error Applying Surface");
-		    }
-		}
-	    };
-	file.add(ac);
-	
-	ac = new AbstractAction("Save As") {
-		public void actionPerformed(ActionEvent e) {
-		    if(picDialog.showSaveDialog(null) != JFileChooser.APPROVE_OPTION)
-			return;
+                    picState.readData(in);
+                    setTitle(TITLE + " - " + filename.getName());
 
-		    try {
-			filename = picDialog.getSelectedFile();
+                } catch (FileNotFoundException ex) {
+                    errorMsg("File not found on open: " + ex,
+                            "Error Opening File");
+                } catch (IOException ex) {
+                    errorMsg("I/O error reading file " + filename + "\n" + ex,
+                            "Error Reading File");
+                } catch (PicFormatException ex) {
+                    errorMsg("Incorrect .pic file format" + filename + ".\n"
+                            + ex, "Error in File Format");
+                } catch (SetSurfaceException ex) {
+                    errorMsg("Surface described in " + filename
+                            + " not usable\n" + ex, "Error Applying Surface");
+                }
+            }
+        };
+        file.add(ac);
 
-			if (!filename.getName().endsWith(".pic"))
-			    filename = new File(filename.getPath()+".pic");
+        ac = new AbstractAction("Save As") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (picDialog.showSaveDialog(null) != JFileChooser.APPROVE_OPTION)
+                    return;
 
-			if(filename.exists() &&
-			   !confirm("Overwrite selected file?"))
-			    return;
+                try {
+                    filename = picDialog.getSelectedFile();
 
-			FileOutputStream out = new FileOutputStream(filename);
+                    if (!filename.getName().endsWith(".pic"))
+                        filename = new File(filename.getPath() + ".pic");
 
-			setTitle(TITLE+" - "+filename.getName());
-			picState.writeData(out);
-		    } catch(FileNotFoundException ex) {
-			System.err.println("Cannot open file for writing: "+ex);
-		    }  		
-		}
-	    };
-	file.add(ac);
+                    if (filename.exists()
+                            && !confirm("Overwrite selected file?"))
+                        return;
 
-	ac = new AbstractAction("Write Metapost") {
-		public void actionPerformed(ActionEvent e) {
-		    if(mpDialog.showSaveDialog((java.awt.Component)e.getSource()) != JFileChooser.APPROVE_OPTION)
-			return;
+                    FileOutputStream out = new FileOutputStream(filename);
 
-		    try {
-			FileOutputStream out = new FileOutputStream(mpDialog.getSelectedFile());
-			picState.writeMetapost(out);
-		    } catch(FileNotFoundException ex) {
-			System.err.println("Cannot open file for writing: "+ex);
-		    }
-		}
-	    };
-	file.add(ac);
+                    setTitle(TITLE + " - " + filename.getName());
+                    picState.writeData(out);
+                } catch (FileNotFoundException ex) {
+                    System.err.println("Cannot open file for writing: " + ex);
+                }
+            }
+        };
+        file.add(ac);
 
-	file.add(new JSeparator());
+        ac = new AbstractAction("Write Metapost") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (mpDialog.showSaveDialog((java.awt.Component) e.getSource()) != JFileChooser.APPROVE_OPTION)
+                    return;
 
-	return file;
+                try {
+                    FileOutputStream out = new FileOutputStream(
+                            mpDialog.getSelectedFile());
+                    picState.writeMetapost(out);
+                } catch (FileNotFoundException ex) {
+                    System.err.println("Cannot open file for writing: " + ex);
+                }
+            }
+        };
+        file.add(ac);
+
+        file.add(new JSeparator());
+
+        return file;
     }
 
     JMenu initCutSchemeMenu() {
-	JMenu cutSchemes = new JMenu("Cutting methods");
+        JMenu cutSchemes = new JMenu("Cutting methods");
 
-	Action ac = new AbstractAction("Finite radial cuts") {
-		public void actionPerformed(ActionEvent e) {
-		    CutScheme cur = picState.getCutScheme();
-		    picState.getSurface().removeSurfaceChangeListener(cur);
-		    
-		    cur = new RadialCutScheme();
-		    cur.surfaceChanged(picState.getSurface());
-		    cycleCanvas.surfaceChanged(picState.getSurface());
-		    picState.getSurface().addSurfaceChangeListener(cur);
+        Action ac = new AbstractAction("Finite radial cuts") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                CutScheme cur = picState.getCutScheme();
+                picState.getSurface().removeSurfaceChangeListener(cur);
 
-		    picState.setCutScheme(cur);
-		}
-	    };
-	cutSchemes.add(ac);
+                cur = new RadialCutScheme();
+                cur.surfaceChanged(picState.getSurface());
+                cycleCanvas.surfaceChanged(picState.getSurface());
+                picState.getSurface().addSurfaceChangeListener(cur);
 
-	ac = new AbstractAction("Radial cuts to infinity") {
-		public void actionPerformed(ActionEvent e) {
-		    CutScheme cur = picState.getCutScheme();
-		    picState.getSurface().removeSurfaceChangeListener(cur);
-		    
-		    cur = new OutRadialCutScheme();
-		    cur.surfaceChanged(picState.getSurface());
-		    cycleCanvas.surfaceChanged(picState.getSurface());
-		    picState.getSurface().addSurfaceChangeListener(cur);
-		    picState.setCutScheme(cur);
-		}
-	    };
-	cutSchemes.add(ac);
+                picState.setCutScheme(cur);
+            }
+        };
+        cutSchemes.add(ac);
 
-	return cutSchemes;
+        ac = new AbstractAction("Radial cuts to infinity") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                CutScheme cur = picState.getCutScheme();
+                picState.getSurface().removeSurfaceChangeListener(cur);
+
+                cur = new OutRadialCutScheme();
+                cur.surfaceChanged(picState.getSurface());
+                cycleCanvas.surfaceChanged(picState.getSurface());
+                picState.getSurface().addSurfaceChangeListener(cur);
+                picState.setCutScheme(cur);
+            }
+        };
+        cutSchemes.add(ac);
+
+        return cutSchemes;
     }
 
     boolean confirm(String message) {
-	int resp = JOptionPane.showConfirmDialog(null, message, "Confirm",
-						 JOptionPane.YES_NO_OPTION);	
-	if(resp == JOptionPane.YES_OPTION)
-	    return true;
-	return false;
+        int resp = JOptionPane.showConfirmDialog(null, message, "Confirm",
+                JOptionPane.YES_NO_OPTION);
+        if (resp == JOptionPane.YES_OPTION)
+            return true;
+        return false;
     }
-    
+
     void errorMsg(String message, String title) {
-	JOptionPane.showMessageDialog(this, message, title,
-				      JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, title,
+                JOptionPane.ERROR_MESSAGE);
     }
 
     // GUI components
@@ -283,7 +284,7 @@ public class MainWindow extends javax.swing.JFrame {
     private JFileChooser picDialog;
     private JFileChooser mpDialog;
     private File filename;
-    
+
     // Member components
     private PicState picState;
 

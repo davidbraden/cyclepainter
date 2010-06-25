@@ -14,66 +14,64 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
+ */
 package cyclepainter.mathsstate;
-
 
 import cyclepainter.mapleutil.*;
 import cyclepainter.exceptions.*;
 import cyclepainter.mathsstate.event.*;
 
 import javax.swing.event.*;
-import javax.swing.AbstractListModel;
 import java.util.*;
-import java.io.*;
 import java.awt.geom.*;
-import java.awt.Color;
 
 import com.maplesoft.openmaple.*;
 import com.maplesoft.externalcall.*;
 
 import com.maplesoft.openmaple.List;
 
-
 public class RiemannSurface {
-    public static final Point2D INFINITY = new Point2D.Double(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+    public static final Point2D INFINITY = new Point2D.Double(
+            Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
 
-    public RiemannSurface(String f, String x, String y, Point2D base, Point2D sheetsBase) throws SetSurfaceException, MapleInitException {
-	initialize();
-	setSurface(f, x, y, base, sheetsBase);
+    public RiemannSurface(String f, String x, String y, Point2D base,
+            Point2D sheetsBase) throws SetSurfaceException, MapleInitException {
+        initialize();
+        setSurface(f, x, y, base, sheetsBase);
     }
 
     public RiemannSurface() throws MapleInitException {
-	initialize();
+        initialize();
     }
 
-    public RiemannSurface(RiemannSurface s) 
-	throws SetSurfaceException, MapleInitException {
-	initialize();
-	setSurface(s.f, s.x, s.y, s.basePoint, s.sheetsBase);
+    public RiemannSurface(RiemannSurface s) throws SetSurfaceException,
+            MapleInitException {
+        initialize();
+        setSurface(s.f, s.x, s.y, s.basePoint, s.sheetsBase);
     }
 
     private void initialize() throws MapleInitException {
-	// First try to get maple up and running
-	maple = MapleUtils.connect();
+        // First try to get maple up and running
+        maple = MapleUtils.connect();
 
-	listeners = new EventListenerList();
+        listeners = new EventListenerList();
     }
 
     public MapleUtils getMaple() {
-	return maple;
+        return maple;
     }
 
     /** Resets to simple elliptic curve */
     public void resetToDefault() {
-	try {
-	    setSurface("y^2+x^4-1", "x", "y", new Point2D.Double(0, 0), 
-		       new Point2D.Double(1.0, 1.0));
-	} catch(SetSurfaceException e) {
-	    System.err.println(e);
-	    System.err.println("Fatal error: setting surface to known, simple default failed");
-	    System.exit(1);
-	}
+        try {
+            setSurface("y^2+x^4-1", "x", "y", new Point2D.Double(0, 0),
+                    new Point2D.Double(1.0, 1.0));
+        } catch (SetSurfaceException e) {
+            System.err.println(e);
+            System.err
+                    .println("Fatal error: setting surface to known, simple default failed");
+            System.exit(1);
+        }
 
     }
 
@@ -89,145 +87,142 @@ public class RiemannSurface {
      * @param y
      *            Second variable in f
      */
-    public void setSurface(String f, String x, String y, 
-			   Point2D basePoint, Point2D sheetsBase) throws 
-			       SetSurfaceException {
-	Algebraic newMonodromy;
-	HashSet<Point2D> newBranches;
-	List newDefiningSheets;
-	Algebraic newInfMonodromy;
-	Point2D newBasePoint = basePoint;
-	String s;
+    public void setSurface(String f, String x, String y, Point2D basePoint,
+            Point2D sheetsBase) throws SetSurfaceException {
+        Algebraic newMonodromy;
+        HashSet<Point2D> newBranches;
+        List newDefiningSheets;
 
-	try {
-	    // First calculate the monodromy
+        Point2D newBasePoint = basePoint;
+        String s;
 
-	    s = String.format("use_base := %s:", maple.pointToString(basePoint));
-	    maple.evaluate(s);
-	    maple.evaluate("forget(`algcurves/Monodromy`):");
-	    s = String.format("mono := `algcurves/monodromy`(%s, %s, %s);", f,
-			      x, y);
-	    newMonodromy = maple.evaluate(s);
-	    maple.evaluate("use_base := 'use_base':");
-	    
-	    List mapBranches = (List)maple.evaluate("map(x->x[1], mono[3]):");
-	    newBranches = new HashSet<Point2D>();
+        try {
+            // First calculate the monodromy
 
-	    for (int i = 1; i <= mapBranches.length(); ++i)
-		newBranches.add(maple.algToPoint(mapBranches.select(i)));
+            s = String.format("use_base := %s:",
+                    MapleUtils.pointToString(basePoint));
+            maple.evaluate(s);
+            maple.evaluate("forget(`algcurves/Monodromy`):");
+            s = String.format("mono := `algcurves/monodromy`(%s, %s, %s);", f,
+                    x, y);
+            newMonodromy = maple.evaluate(s);
+            maple.evaluate("use_base := 'use_base':");
 
-	    newBasePoint = maple.algToPoint(maple.evaluate("mono[1]:"));
-	} catch(MapleException e) {
-	    throw new SetSurfaceException("Maple's monodromy calculation failed.\n"
-					  +"Surface change aborted.\n"+e);
-	}
-	
-	// Then calculate our canonical sheet numbering at the requested base.
-	try {
-	    List sheets = (List)maple.evaluate("mono[2]:");
-	    newDefiningSheets 
-		= maple.propagateSheets(getCurveString(f,x,y), sheets, 
-					basePoint, sheetsBase);
-	} catch(Exception e) {
-	    throw new SetSurfaceException(
-	       "Unable to translate maple's monodromy into unique definition "
-	       +"of sheets.\n"
-	       +"Does straight line path from base point to sheets base go too "
-	       +"close to a branch?\n"
-	       +e);
-	}
+            List mapBranches = (List) maple.evaluate("map(x->x[1], mono[3]):");
+            newBranches = new HashSet<Point2D>();
 
-	// Do this stuff at end so we can revert before if necessary
-	this.f = f;
-	this.x = x;
-	this.y = y;
-	this.sheetsBase = sheetsBase;
-	this.branches = newBranches;
-	this.monodromy = newMonodromy;
-	this.basePoint = newBasePoint;
-	this.definingSheets = newDefiningSheets;
+            for (int i = 1; i <= mapBranches.length(); ++i)
+                newBranches.add(maple.algToPoint(mapBranches.select(i)));
 
-	fireSurfaceChangeEvent();
+            newBasePoint = maple.algToPoint(maple.evaluate("mono[1]:"));
+        } catch (MapleException e) {
+            throw new SetSurfaceException(
+                    "Maple's monodromy calculation failed.\n"
+                            + "Surface change aborted.\n" + e);
+        }
+
+        // Then calculate our canonical sheet numbering at the requested base.
+        try {
+            List sheets = (List) maple.evaluate("mono[2]:");
+            newDefiningSheets = maple.propagateSheets(getCurveString(f, x, y),
+                    sheets, basePoint, sheetsBase);
+        } catch (Exception e) {
+            throw new SetSurfaceException(
+                    "Unable to translate maple's monodromy into unique definition "
+                            + "of sheets.\n"
+                            + "Does straight line path from base point to sheets base go too "
+                            + "close to a branch?\n" + e);
+        }
+
+        // Do this stuff at end so we can revert before if necessary
+        this.f = f;
+        this.x = x;
+        this.y = y;
+        this.sheetsBase = sheetsBase;
+        this.branches = newBranches;
+        this.monodromy = newMonodromy;
+        this.basePoint = newBasePoint;
+        this.definingSheets = newDefiningSheets;
+
+        fireSurfaceChangeEvent();
     }
 
     public String getF() {
-	return f;
+        return f;
     }
 
     public String getX() {
-	return x;
+        return x;
     }
 
     public String getY() {
-	return y;
+        return y;
     }
 
     public String getSurfaceString() {
-	return String.format("f(%s,%s) = %s", x, y, f);
+        return String.format("f(%s,%s) = %s", x, y, f);
     }
-	
+
     /** For use in calls to extcurves */
     String getCurveString() {
-	return String.format("Record('f'=%s, 'x'=%s, 'y'=%s)", f, x, y);
+        return String.format("Record('f'=%s, 'x'=%s, 'y'=%s)", f, x, y);
     }
 
     String getCurveString(String f, String x, String y) {
-	return String.format("Record('f'=%s, 'x'=%s, 'y'=%s)", f, x, y);
+        return String.format("Record('f'=%s, 'x'=%s, 'y'=%s)", f, x, y);
     }
 
     public List getDefiningSheets() {
-	return definingSheets;
+        return definingSheets;
     }
 
     /** The finite branch points of the curve */
     public Set<Point2D> getFiniteBranches() {
-	if (this.branches == null)
-	    return new HashSet<Point2D>();
+        if (this.branches == null)
+            return new HashSet<Point2D>();
 
-	Set<Point2D> branches = new HashSet<Point2D>(this.branches);
-	branches.remove(INFINITY);
-	return branches;
+        Set<Point2D> branches = new HashSet<Point2D>(this.branches);
+        branches.remove(INFINITY);
+        return branches;
     }
 
     public boolean hasInfiniteBranch() {
-	if (branches == null)
-	    return false;
+        if (branches == null)
+            return false;
 
-	return branches.contains(INFINITY);
+        return branches.contains(INFINITY);
     }
 
     /** Gives the base point used in monodromy calculations. **/
     public Point2D getBasePoint() {
-	return basePoint;
+        return basePoint;
     }
 
     public Point2D getSheetsBase() {
-	return this.sheetsBase;
+        return this.sheetsBase;
     }
 
     public Algebraic getMonodromy() {
-	return monodromy;
+        return monodromy;
     }
-	
 
     public void addSurfaceChangeListener(SurfaceChangeListener l) {
-	listeners.add(SurfaceChangeListener.class, l);
+        listeners.add(SurfaceChangeListener.class, l);
     }
 
     public void removeSurfaceChangeListener(SurfaceChangeListener l) {
-	listeners.remove(SurfaceChangeListener.class, l);
+        listeners.remove(SurfaceChangeListener.class, l);
     }
 
     protected void fireSurfaceChangeEvent() {
-	Object[] ls = listeners.getListenerList();
+        Object[] ls = listeners.getListenerList();
 
-	for (int i = ls.length - 2; i >= 0; i -= 2) {
-	    if (ls[i] == SurfaceChangeListener.class) {
-		((SurfaceChangeListener) ls[i + 1]).surfaceChanged(this);
-	    }
-	}
+        for (int i = ls.length - 2; i >= 0; i -= 2) {
+            if (ls[i] == SurfaceChangeListener.class) {
+                ((SurfaceChangeListener) ls[i + 1]).surfaceChanged(this);
+            }
+        }
     }
-
 
     // Java infrastructure
     EventListenerList listeners;
@@ -237,7 +232,7 @@ public class RiemannSurface {
     Set<Point2D> branches;
     Algebraic monodromy;
     Point2D basePoint;
-	
+
     List definingSheets;
     Point2D sheetsBase;
 

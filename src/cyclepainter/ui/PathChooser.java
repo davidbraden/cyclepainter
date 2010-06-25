@@ -14,9 +14,7 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
-
-
+ */
 
 package cyclepainter.ui;
 
@@ -36,226 +34,237 @@ import javax.swing.event.*;
 
 /**
  * UI for editing available paths and selecting active/visible ones
- * @author  tim
+ * 
+ * @author tim
  */
-public class PathChooser extends JPanel 
-    implements ListDataListener, PathSetListener, ResetListener {
-	static final long serialVersionUID = 1;
+public class PathChooser extends JPanel implements ListDataListener,
+        PathSetListener, ResetListener {
+    static final long serialVersionUID = 1;
 
     public PathChooser(PicState picState) {
-    	this.picState = picState;
-	picState.addPathSetListener(this);
+        this.picState = picState;
+        picState.addPathSetListener(this);
         picState.addResetListener(this);
-    	
-    	// We want to know when the list of valid names changes so we can
-    	// decide which buttons are still valid.
-    	listeners = new LinkedList<PathSelectionListener>();
-    	
+
+        // We want to know when the list of valid names changes so we can
+        // decide which buttons are still valid.
+        listeners = new LinkedList<PathSelectionListener>();
+
         initComponents();
     }
 
-    /** This method is called from within the constructor to
-     * initialize the form.
+    /**
+     * This method is called from within the constructor to initialize the form.
      */
     private void initComponents() {
-    	setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-    	//setLayout(new GridLayout());
-    	
-    	addPath = new JButton("Add path");
-    	addPath.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			if(newName.getText().length() != 0) {
-        			picState.addPath(newName.getText());
-    			}
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        // setLayout(new GridLayout());
 
-    		}
-    	});
-    	add(addPath);
-    	
-    	delPath = new JButton("Delete path");
-    	delPath.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			picState.delPath((String)pathList.getSelectedValue());
-    		}
-    	});
-    	add(delPath);
-    	
-    	clearPath = new JButton("Clear path");
-    	add(clearPath);
-    	    	
-    	newName = new JTextField();
-    	add(newName);
+        addPath = new JButton("Add path");
+        addPath.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (newName.getText().length() != 0) {
+                    picState.addPath(newName.getText());
+                }
 
-    	pathList = new JList();
-	pathList.setListData(new Vector<String>(picState.getPathNames()));
-    	pathList.setDragEnabled(true);
-    	
-    	scroller = new JScrollPane(pathList);
-	scroller.setMinimumSize(new Dimension(50, 100));
-    	add(scroller);
-    	
-    	activeDescr = new JLabel("Active/Visible paths");
-    	add(activeDescr);
-    	
-    	// Create a handler so the pushbuttons can accept a path properly
-    	TransferHandler th = new TransferHandler("text") {
-    		public boolean importData(TransferHandler.TransferSupport support) {
-    			Transferable t = support.getTransferable();
-    			try {
-    				String name = (String)t.getTransferData(DataFlavor.stringFlavor);
-    				JToggleButton btn = (JToggleButton)support.getComponent();
-    				if(!picState.hasPath(name))
-    					return false;
-    				else {
-    					btn.setText(name);
-    					btn.setEnabled(name.length() != 0);
-    					
-    					// Fire necessary events
-    					fireVisiblePathsChanged();
+            }
+        });
+        add(addPath);
 
-    					if(btn.isSelected())
-    						fireActivePathChanged();
-    				}    					
-    			} catch(UnsupportedFlavorException e) {
-    				return false;
-    			} catch(IOException e) {
-    				return false;
-    			}
-    			
-    			return true;
-    		}
-    	};
-    	// And to deal with activating buttons
-    	grp = new ButtonGroup();
-    	
-    	visPaths = new ArrayList<JToggleButton>();
-    	ActionListener l = new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			fireActivePathChanged();
-    		}
-    	};
-    	for(int i = 0; i < 2; ++i) {
-    		JToggleButton vis = new JToggleButton(" ");
-    		vis.setTransferHandler(th);
-    		vis.setEnabled(false);
-    		vis.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
-    		vis.setPreferredSize(new Dimension(0, 30));
-		vis.setMinimumSize(new Dimension(0, 30));
-    		vis.addActionListener(l);
-    		add(vis);
-    		grp.add(vis);
-    		visPaths.add(vis);
-    	}
-    	visPaths.get(0).setSelected(true);
+        delPath = new JButton("Delete path");
+        delPath.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                picState.delPath((String) pathList.getSelectedValue());
+            }
+        });
+        add(delPath);
+
+        clearPath = new JButton("Clear path");
+        add(clearPath);
+
+        newName = new JTextField();
+        add(newName);
+
+        pathList = new JList();
+        pathList.setListData(new Vector<String>(picState.getPathNames()));
+        pathList.setDragEnabled(true);
+
+        scroller = new JScrollPane(pathList);
+        scroller.setMinimumSize(new Dimension(50, 100));
+        add(scroller);
+
+        activeDescr = new JLabel("Active/Visible paths");
+        add(activeDescr);
+
+        // Create a handler so the pushbuttons can accept a path properly
+        TransferHandler th = new TransferHandler("text") {
+            @Override
+            public boolean importData(TransferHandler.TransferSupport support) {
+                Transferable t = support.getTransferable();
+                try {
+                    String name = (String) t
+                            .getTransferData(DataFlavor.stringFlavor);
+                    JToggleButton btn = (JToggleButton) support.getComponent();
+                    if (!picState.hasPath(name))
+                        return false;
+                    else {
+                        btn.setText(name);
+                        btn.setEnabled(name.length() != 0);
+
+                        // Fire necessary events
+                        fireVisiblePathsChanged();
+
+                        if (btn.isSelected())
+                            fireActivePathChanged();
+                    }
+                } catch (UnsupportedFlavorException e) {
+                    return false;
+                } catch (IOException e) {
+                    return false;
+                }
+
+                return true;
+            }
+        };
+        // And to deal with activating buttons
+        grp = new ButtonGroup();
+
+        visPaths = new ArrayList<JToggleButton>();
+        ActionListener l = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                fireActivePathChanged();
+            }
+        };
+        for (int i = 0; i < 2; ++i) {
+            JToggleButton vis = new JToggleButton(" ");
+            vis.setTransferHandler(th);
+            vis.setEnabled(false);
+            vis.setMaximumSize(new Dimension(Short.MAX_VALUE, Short.MAX_VALUE));
+            vis.setPreferredSize(new Dimension(0, 30));
+            vis.setMinimumSize(new Dimension(0, 30));
+            vis.addActionListener(l);
+            add(vis);
+            grp.add(vis);
+            visPaths.add(vis);
+        }
+        visPaths.get(0).setSelected(true);
     }
-    
+
     /** Remove invalid names from buttons describing visible paths */
     private void pruneButtons() {
-    	boolean visChanged = false, activeRemoved = false;
-    	for(JToggleButton btn : visPaths) {
-            if(!picState.hasPath(btn.getText())) {
+        boolean visChanged = false, activeRemoved = false;
+        for (JToggleButton btn : visPaths) {
+            if (!picState.hasPath(btn.getText())) {
                 btn.setText("");
                 btn.setEnabled(false);
                 visChanged = true;
-                if(btn.isSelected())
+                if (btn.isSelected())
                     activeRemoved = true;
             }
-    	}
+        }
 
-	// Active path has been deleted, find another candidate to make
-	// active. (hopefully).
-    	if(activeRemoved) {
-	    for(JToggleButton btn : visPaths) {
-		if(btn.isEnabled()) {
-		    btn.setSelected(true);
-		    break;
-		}
-	    }
-    	}
+        // Active path has been deleted, find another candidate to make
+        // active. (hopefully).
+        if (activeRemoved) {
+            for (JToggleButton btn : visPaths) {
+                if (btn.isEnabled()) {
+                    btn.setSelected(true);
+                    break;
+                }
+            }
+        }
 
-    	if(visChanged)
+        if (visChanged)
             fireVisiblePathsChanged();
-        if(activeRemoved)
+        if (activeRemoved)
             fireActivePathChanged();
-    	
+
     }
 
     // Stuff to be a good model of path selection
     public RiemannPath getActivePath() {
-    	for(JToggleButton btn : visPaths) {
-            if(btn.isSelected() && btn.getText().length() != 0)
+        for (JToggleButton btn : visPaths) {
+            if (btn.isSelected() && btn.getText().length() != 0)
                 return picState.getPath(btn.getText());
-    	}
-    	return null;
+        }
+        return null;
     }
-    
+
     public List<RiemannPath> getVisiblePaths() {
-    	List<RiemannPath> names = new LinkedList<RiemannPath>();
-    	for(JToggleButton btn : visPaths) {
-            if(btn.getText().length() != 0)
+        List<RiemannPath> names = new LinkedList<RiemannPath>();
+        for (JToggleButton btn : visPaths) {
+            if (btn.getText().length() != 0)
                 names.add(picState.getPath(btn.getText()));
-    	}
-    	return names;
+        }
+        return names;
     }
 
+    @Override
     public void pathSetChanged(PicState picState) {
-	pathList.setListData(new Vector<String>(picState.getPathNames()));
+        pathList.setListData(new Vector<String>(picState.getPathNames()));
 
-	pruneButtons();
+        pruneButtons();
     }
 
+    @Override
     public void dataReset(PicState st) {
         // PicState data reset, we must clear out all active paths
-    	for(JToggleButton btn : visPaths) {
+        for (JToggleButton btn : visPaths) {
             btn.setText("");
             btn.setEnabled(false);
-    	}
+        }
 
         fireVisiblePathsChanged();
         fireActivePathChanged();
     }
-    
+
     public void addPathSelectionListener(PathSelectionListener l) {
-    	listeners.add(l);
+        listeners.add(l);
     }
-    
+
     public void removePathSelectionListener(PathSelectionListener l) {
-    	listeners.remove(l);
+        listeners.remove(l);
     }
-    
+
     protected void fireVisiblePathsChanged() {
-    	List<RiemannPath> visiblePaths = getVisiblePaths();
-    	for(PathSelectionListener l : listeners) {
-    		l.visiblePathsChanged(visiblePaths);
-    	}
+        List<RiemannPath> visiblePaths = getVisiblePaths();
+        for (PathSelectionListener l : listeners) {
+            l.visiblePathsChanged(visiblePaths);
+        }
     }
-    
+
     protected void fireActivePathChanged() {
         RiemannPath newPath = getActivePath();
-        
+
         if (newPath != curPath) {
             curPath = newPath;
 
-            for(PathSelectionListener l : listeners) {
+            for (PathSelectionListener l : listeners) {
                 l.activePathChanged(curPath, newPath);
             }
         }
     }
-    
+
     // Things to do when list of names changes
     // Same in all relevant cases. Don't care if it's a change or removal.
+    @Override
     public void contentsChanged(ListDataEvent e) {
-	pruneButtons();
+        pruneButtons();
     }
 
+    @Override
     public void intervalAdded(ListDataEvent e) {
-    	// Can't affect whether visible/active are valid
+        // Can't affect whether visible/active are valid
     }
-    
+
+    @Override
     public void intervalRemoved(ListDataEvent e) {
-    	contentsChanged(e);
+        contentsChanged(e);
     }
-    
+
     private RiemannPath curPath;
 
     private JTextField newName;
@@ -267,7 +276,7 @@ public class PathChooser extends JPanel
     private JLabel activeDescr;
     private java.util.List<JToggleButton> visPaths;
     private ButtonGroup grp;
-    
+
     List<PathSelectionListener> listeners;
 
     PicState picState;

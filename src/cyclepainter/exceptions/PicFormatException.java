@@ -14,12 +14,11 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
+ */
 package cyclepainter.exceptions;
-
 
 public class PicFormatException extends Exception {
     public PicFormatException(String msg) {
-	super(msg);
+        super(msg);
     }
 }

@@ -14,7 +14,7 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
+ */
 
 package cyclepainter.mathsstate;
 
@@ -28,18 +28,21 @@ import java.awt.geom.Line2D;
 import cyclepainter.mathsstate.event.SurfaceChangeListener;
 import cyclepainter.exceptions.SheetPropagationException;
 
-/** Interface needed to assign points to sheets and split segments
-   into sheeted parts as required.
-
-   This base is a trivial implementation that maps everything to sheet 0.   
+/**
+ * Interface needed to assign points to sheets and split segments into sheeted
+ * parts as required.
+ * 
+ * This base is a trivial implementation that maps everything to sheet 0.
  */
 
 public class CutScheme implements SurfaceChangeListener {
-    public List<SheetedSeg> splitSegment(Point2D begin, Point2D end, Point2D sheet) 
-	throws SheetPropagationException {
+    public List<SheetedSeg> splitSegment(Point2D begin, Point2D end,
+            Point2D sheet) throws SheetPropagationException {
         return splitSegment(begin, end, getSheet(begin, sheet));
     }
-    public List<SheetedSeg> splitSegment(Point2D begin, Point2D end, int sheetNum) {
+
+    public List<SheetedSeg> splitSegment(Point2D begin, Point2D end,
+            int sheetNum) {
         List<SheetedSeg> arr = new LinkedList<SheetedSeg>();
         arr.add(new SheetedSeg(begin, end, sheetNum));
         return arr;
@@ -49,14 +52,15 @@ public class CutScheme implements SurfaceChangeListener {
         return 0;
     }
 
-    public List<Point2D> getAllSheets(Point2D x) throws SheetPropagationException {
-	ArrayList<Point2D> sheets = new ArrayList<Point2D>();
-	sheets.add(new Point2D.Double(0,0));
-	return sheets;
+    public List<Point2D> getAllSheets(Point2D x)
+            throws SheetPropagationException {
+        ArrayList<Point2D> sheets = new ArrayList<Point2D>();
+        sheets.add(new Point2D.Double(0, 0));
+        return sheets;
     }
-	
 
-    public Point2D getYValue(Point2D x, int sheet) throws SheetPropagationException {
+    public Point2D getYValue(Point2D x, int sheet)
+            throws SheetPropagationException {
         return new Point2D.Double();
     }
 
@@ -68,7 +72,8 @@ public class CutScheme implements SurfaceChangeListener {
         return 1;
     }
 
+    @Override
     public void surfaceChanged(RiemannSurface surface) {
-	// Don't care
+        // Don't care
     }
 }

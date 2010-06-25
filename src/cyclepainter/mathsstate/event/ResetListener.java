@@ -14,16 +14,13 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
-
-
+ */
 
 package cyclepainter.mathsstate.event;
 
 import cyclepainter.mathsstate.PicState;
 
 import java.util.EventListener;
-import java.awt.geom.Point2D;
 
 public interface ResetListener extends EventListener {
     public void dataReset(PicState surf);

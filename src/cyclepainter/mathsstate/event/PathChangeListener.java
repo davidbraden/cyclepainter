@@ -14,9 +14,7 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
-
-
+ */
 
 package cyclepainter.mathsstate.event;
 
@@ -26,6 +24,7 @@ import cyclepainter.mathsstate.RiemannPath;
 public interface PathChangeListener extends EventListener {
     /** Generic change in path */
     public void pathChanged(RiemannPath path);
+
     /** The initial point has been changed */
     public void sheetChanged(RiemannPath path);
 }

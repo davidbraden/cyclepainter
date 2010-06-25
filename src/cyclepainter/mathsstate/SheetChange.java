@@ -14,8 +14,7 @@
    
    You should have received a copy of the GNU General Public License
    along with CyclePainter.  If not, see <http://www.gnu.org/licenses/>.  
-*/
-
+ */
 
 package cyclepainter.mathsstate;
 
@@ -26,18 +25,20 @@ public class SheetChange {
     public int dir;
 
     SheetChange(Point2D branch, Point2D isection, int dir) {
-	this.branch = branch;
-	this.isection = isection;
-	this.dir = dir;
+        this.branch = branch;
+        this.isection = isection;
+        this.dir = dir;
     }
 
     SheetChange(Point2D isection, int dir) {
-	this.branch = null;
-	this.isection = isection;
-	this.dir = dir;
+        this.branch = null;
+        this.isection = isection;
+        this.dir = dir;
     }
 
+    @Override
     public String toString() {
-	return String.format("<ShCh: branch=%s, isection=%s, dir=%d>", branch, isection, dir);
+        return String.format("<ShCh: branch=%s, isection=%s, dir=%d>", branch,
+                isection, dir);
     }
 }
