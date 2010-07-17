@@ -251,7 +251,7 @@ public class PicState {
             for (SheetedSeg seg : segs) {
                 out.printf(
                         "\t%s subpath (%d, %d) of p transformed trans withcolor colours%d;\n",
-                        drawCmd, curT, curT + 1, seg.sheet);
+                        drawCmd, curT, curT + 1, seg.sheet + 1);
                 ++curT;
                 drawCmd = "draw";
             }

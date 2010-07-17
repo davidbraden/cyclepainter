@@ -6,6 +6,130 @@
 
 # My bits are GPL3.
 
+argument_mean := proc(theta1, theta2)
+local poss, inPt, possPt;
+	poss := (theta1+theta2)/2;
+	inPt := evalf(exp(I*theta1));
+	possPt := evalf(exp(I*poss));
+
+	if abs(possPt - inPt) < abs(possPt + inPt) then
+		return poss
+	else
+		poss := evalf(poss + Pi);
+		if poss > evalf(Pi) then
+			return evalf(poss-2*Pi);
+		else
+			return poss;
+		fi;
+	fi
+end proc:
+
+angle_between := proc(t1, t2)
+    local poss;
+    poss := t2 - t1;
+    if poss < 0 then poss := evalf(poss + 2*Pi) fi;
+    if poss > evalf(Pi) then poss := evalf(2*Pi - poss) fi;
+    return poss;
+end proc:
+
+lift := proc(curve, startSheets, start, fin)
+local res, indexed, finSheets, i, best;
+	res := `algcurves/Acontinuation`(curve:-f, curve:-x, curve:-y, start*(1-t) + fin*t, t, 7):
+
+	indexed := ListTools:-Enumerate(res[1][2]);
+
+	finSheets := [0 $ nops(startSheets)];
+	for i from 1 to nops(startSheets) do
+		best := sort(indexed, (x,y) -> abs(x[2] - startSheets[i]) < abs(y[2] - startSheets[i]))[1];
+		finSheets[i] := res[-1][2][best[1]];
+	od;
+	return finSheets;
+end proc:
+
+central_monodromy := proc(curve, base)
+local finiteBs, wheel, argComparison, spokeAngle1, spokeAngle2, theta, i, j, radius, sheets, sheetsEnd, best, bestDist, perm, liftTriangle, monodromy, branchPerm, branch, curPerm;
+	finiteBs := [fsolve(discrim(curve:-f, curve:-y), curve:-x, complex)];
+	finiteBs := ListTools:-MakeUnique(finiteBs);
+
+	# Only really care relative to base
+	wheel := map(x -> x-base, finiteBs);
+
+	radius := 1.2*max(seq(abs(x), x in wheel));
+
+	# Sort the list by argument from base, keeping track of what
+	# the actual permutation was
+	wheel := map(argument, wheel);
+	wheel := ListTools:-Enumerate(wheel);
+	wheel := sort(wheel, (x,y) -> x[2] < y[2]);
+	perm, wheel := op(ListTools:-Transpose(wheel));
+
+	sheets := [fsolve(subs(curve:-x = base, curve:-f), curve:-y, complex)];
+	liftTriangle := proc(theta1, theta2)
+	local pt1, pt2, tmp;
+		pt1 := base + radius*exp(I*theta1);
+		pt2 := base + radius*exp(I*theta2);
+		tmp := lift(curve, sheets, base, pt1);
+		tmp := lift(curve, tmp, pt1, pt2);
+		tmp := lift(curve, tmp, pt2, base);
+        return tmp;
+	end proc;
+
+	spokeAngle1 := argument_mean(wheel[1], wheel[-1]);
+	wheel := [op(wheel), wheel[1]];
+
+	for branch from 1 to nops(wheel)-1 do
+		spokeAngle2 := argument_mean(wheel[branch], wheel[branch+1]);
+
+        # Modify variables so the triangle always has central angle <
+        # pi/6ish
+        if angle_between(spokeAngle1, spokeAngle2) > 0.5 then
+            if angle_between(spokeAngle1, wheel[branch]) >= 0.25 and angle_between(spokeAngle2, wheel[branch]) >= 0.25 then
+                # Both are fine, narrow the entire field to pi/6ish
+                spokeAngle1 := wheel[branch] - 0.25;
+                spokeAngle2 := wheel[branch] + 0.25;
+            elif angle_between(spokeAngle1, wheel[branch]) < angle_between(spokeAngle2, wheel[branch]) then
+                # spokeAngle2 needs changing
+                spokeAngle2 := spokeAngle1 + 0.5;
+            else
+                spokeAngle1 := spokeAngle2 - 0.5;
+            fi;
+        fi;
+
+		sheetsEnd := liftTriangle(spokeAngle1, spokeAngle2);
+
+        branchPerm := [0 $ nops(sheets)];
+		for i from 1 to nops(sheets) do
+			bestDist := infinity;
+
+			for j from 1 to nops(sheets) do
+				if abs(sheets[i]-sheetsEnd[j]) < bestDist then
+					best := j;
+					bestDist := abs(sheets[i]-sheetsEnd[j]);
+				fi;
+			od;
+			branchPerm[i] := best;
+		od;
+
+		monodromy[branch] := [finiteBs[perm[branch]], group[invperm](convert(branchPerm, `disjcyc`))];
+
+		spokeAngle1 := spokeAngle2;
+	od;
+
+	monodromy := convert(monodromy, list);
+
+	# Finally add in infinity if necessary
+	curPerm := [];
+	for branch in monodromy do
+		curPerm := group[mulperms](curPerm, branch[2]);
+	od;
+
+	if curPerm <> [] then
+		monodromy := [op(monodromy), [infinity, group[invperm](curPerm)]];
+	fi;
+
+	return [base, sheets, monodromy];
+end proc:
+
 displace_sheet_base := proc(curve, y0, dest)
 local solns;
     solns := fsolve(subs(curve:-x=dest, curve:-f), curve:-y, 'complex');
@@ -70,16 +194,22 @@ end proc:
 # Converts the output of monodromy into a description of the effects
 # of crossing a branch cut.
 mono_to_shift := proc(monodromy, base, sheets_base)
-local sorted, mono, modification, shift, cuts;
-    sorted := sort(monodromy, (a,b) -> arg_from_pt(a[1], base, sheets_base) > arg_from_pt(b[1], base, sheets_base));
+local sorted, mono, modification, shift, cuts, curPerm;
+    sorted := sort(monodromy, (a,b) -> arg_from_pt(a[1], base, sheets_base) < arg_from_pt(b[1], base, sheets_base));
     modification := [];
     cuts := [];
+
     for mono in sorted do
-        shift := group[mulperms](group[invperm](modification), mono[2]);
+        curPerm := group[invperm](mono[2]);
+
+        # l_i = c_i . m_b_i ^ -1 . c_i^-1
+        shift := group[mulperms](group[invperm](modification), curPerm);
         shift := group[mulperms](shift, modification);
+
         cuts := [op(cuts), [mono[1], shift]];
 
-        modification := group[mulperms](mono[2], modification);
+        # c_{i+1} = c_i . m_b_i ^ -1
+        modification := group[mulperms](curPerm, modification);
     od;
     return cuts;
 end proc:

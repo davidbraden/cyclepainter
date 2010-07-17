@@ -171,10 +171,10 @@ public class RadialCutScheme extends CutScheme {
         try {
             Algebraic perm;
             String cmd;
-            if (descr.dir == 1)
+            if (descr.dir == -1)
                 cmd = "apply_perm(%s, %d):";
             else
-                cmd = "apply_perm(map(ListTools[Reverse], %s), %d):";
+                cmd = "apply_perm(group[invperm](%s), %d):";
             perm = cutsPermutation.get(descr.branch);
 
             cmd = String.format(cmd, perm.toString(), sheet + 1);
@@ -219,7 +219,7 @@ public class RadialCutScheme extends CutScheme {
             for (SheetChange cut : cuts) {
                 Algebraic perm = cutsPermutation.get(cut.branch);
                 if (cut.dir == -1) {
-                    String cmd = String.format("map(ListTools[Reverse], %s):",
+                    String cmd = String.format("group[invperm](%s):",
                             perm);
                     perm = maple.evaluate(cmd);
                 }

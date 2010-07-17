@@ -99,14 +99,9 @@ public class RiemannSurface {
         try {
             // First calculate the monodromy
 
-            s = String.format("use_base := %s:",
-                    MapleUtils.pointToString(basePoint));
-            maple.evaluate(s);
-            maple.evaluate("forget(`algcurves/Monodromy`):");
-            s = String.format("mono := `algcurves/monodromy`(%s, %s, %s);", f,
-                    x, y);
+            s = "mono := central_monodromy(Record('f'=%s,'x'=%s, 'y'=%s), %s);";
+            s = String.format(s, f, x, y, maple.pointToString(basePoint));
             newMonodromy = maple.evaluate(s);
-            maple.evaluate("use_base := 'use_base':");
 
             List mapBranches = (List) maple.evaluate("map(x->x[1], mono[3]):");
             newBranches = new HashSet<Point2D>();
