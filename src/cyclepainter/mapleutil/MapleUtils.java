@@ -17,11 +17,15 @@
  */
 package cyclepainter.mapleutil;
 
+import com.sun.corba.se.impl.orbutil.closure.Future;
 import cyclepainter.exceptions.*;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.awt.geom.Point2D;
 import java.io.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.*;
 
 import java.text.ParseException;
@@ -31,6 +35,8 @@ import com.maplesoft.openmaple.List;
 import com.maplesoft.externalcall.*;
 
 import com.maplesoft.openmaple.Engine;
+
+import javax.swing.*;
 
 public class MapleUtils {
     private static MapleUtils instance = null;
@@ -47,11 +53,24 @@ public class MapleUtils {
     }
 
     private MapleUtils() throws MapleInitException {
-        readFunctions();
-
-        createEngine();
-
-        initializeEngine();
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println(Thread.currentThread().getName());
+                        readFunctions();
+                        createEngine();
+                        initializeEngine();
+                    } catch (MapleInitException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void createEngine() throws MapleInitException {
@@ -121,8 +140,25 @@ public class MapleUtils {
         }
     }
 
-    public Algebraic evaluate(String s) throws MapleException {
-        return engine.evaluate(s);
+    public Algebraic evaluate(final String s) throws MapleException {
+        final Algebraic[] result = new Algebraic[1];
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println("Evaluate " + s);
+                        result[0] = engine.evaluate(s);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return result[0];
     }
 
     /** Format a Point2D as a string in the complex plane */
@@ -134,7 +170,7 @@ public class MapleUtils {
     /** Parse an expression to a complex number */
     public Point2D stringToPoint(String s) throws ParseException {
         try {
-            Algebraic pt = engine.evaluate("evalf(" + s + "):");
+            Algebraic pt = evaluate("evalf(" + s + "):");
             return algToPoint(pt);
         } catch (MapleException e) {
             throw new ParseException("Error parsing point '" + s
@@ -155,18 +191,35 @@ public class MapleUtils {
      *            complex numeric result.
      * @return a+bi |--> Point2D(a,b)
      */
-    public Point2D algToPoint(Algebraic pt) throws MapleException {
-        if (pt instanceof ComplexNumeric) {
-            ComplexNumeric z = (ComplexNumeric) pt;
-            return new Point2D.Double(z.realPart().doubleValue(), z
-                    .imaginaryPart().doubleValue());
-        } else if (pt instanceof Name && pt.toString().equals("infinity")) {
-            return new Point2D.Double(Double.POSITIVE_INFINITY,
-                    Double.POSITIVE_INFINITY);
-        } else {
-            Numeric z = (Numeric) pt;
-            return new Point2D.Double(z.doubleValue(), 0.0);
+    public Point2D algToPoint(final Algebraic pt) throws MapleException {
+        final Point2D[] result = new Point2D[1];
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (pt instanceof ComplexNumeric) {
+                            ComplexNumeric z = (ComplexNumeric) pt;
+                            result[0] =  new Point2D.Double(z.realPart().doubleValue(), z
+                                    .imaginaryPart().doubleValue());
+                        } else if (pt instanceof Name && pt.toString().equals("infinity")) {
+                            result[0] =  new Point2D.Double(Double.POSITIVE_INFINITY,
+                                    Double.POSITIVE_INFINITY);
+                        } else {
+                            Numeric z = (Numeric) pt;
+                            result[0] =  new Point2D.Double(z.doubleValue(), 0.0);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        return result[0];
+
     }
 
     /**
@@ -189,7 +242,7 @@ public class MapleUtils {
             String cmd = String.format("lift_point(%s, %s, %s, %s):", curve,
                     pointToString(from), pointToString(to), sheets);
             limitNextCalc(2.0);
-            newSheets = (List) engine.evaluate(cmd);
+            newSheets = (List) evaluate(cmd);
             removeLimit();
             return newSheets;
 
@@ -206,7 +259,7 @@ public class MapleUtils {
      */
     void limitNextCalc(double seconds) {
         try {
-            engine.evaluate("time_limit := kernelopts(cputime)+" + seconds
+            evaluate("time_limit := kernelopts(cputime)+" + seconds
                     + ":");
         } catch (MapleException e) {
             System.err.println("Could not set time limit for calculation");
@@ -215,7 +268,7 @@ public class MapleUtils {
 
     void removeLimit() {
         try {
-            engine.evaluate("time_limit := 'time_limit':");
+            evaluate("time_limit := 'time_limit':");
         } catch (MapleException e) {
             System.err
                     .println("Could not remove time limit for calculation, expect problems");
@@ -226,6 +279,63 @@ public class MapleUtils {
     public Procedure getFunction(String name) {
         return functions.get(name);
     }
+
+    public Algebraic select(final List list, final int i) {
+        final Algebraic[] result = new Algebraic[1];
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println("Select"  + list.toString());
+                        result[0] =list.select(i);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return result[0];
+    }
+
+    public int length(final List list) {
+        final int[] result = new int[1];
+        try {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println("Length" + list.toString());
+                        result[0] = list.length();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return result[0];
+    }
+    
+    private void submitAndWait(Runnable runnable) {
+        try {
+            java.util.concurrent.Future<?> future = executor.submit(runnable);
+            while (!future.isDone()) {
+                Thread.sleep(100);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private ExecutorService executor = Executors.newFixedThreadPool(1);
+
+    public
 
     HashMap<String, String> functionStrings;
     HashMap<String, Procedure> functions;

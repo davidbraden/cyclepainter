@@ -128,16 +128,16 @@ public class RadialCutScheme extends CutScheme {
                     .evaluate("select(x->x[1]=infinity, cutmono):");
             cutsPermutation = new HashMap<Point2D, Algebraic>();
             if (inf.length() > 0) {
-                List item = (List) inf.select(1);
-                cutsPermutation.put(RiemannSurface.INFINITY, item.select(2));
+                List item = (List) maple.select(inf, 1);
+                cutsPermutation.put(RiemannSurface.INFINITY, maple.select(item, 2));
             }
 
             List mapBs = (List) maple
                     .evaluate("remove(x -> x[1]=infinity, cutmono):");
             for (int i = 1; i <= mapBs.length(); ++i) {
-                List item = (List) mapBs.select(i);
-                cutsPermutation.put(maple.algToPoint(item.select(1)),
-                        item.select(2));
+                List item = (List) maple.select(mapBs, i);
+                cutsPermutation.put(maple.algToPoint(maple.select(item, 1)),
+                        maple.select(item, 2));
             }
             mapBs.dispose();
 
@@ -228,7 +228,7 @@ public class RadialCutScheme extends CutScheme {
             }
 
             for (int i = 1; i <= mapSheets.length(); ++i) {
-                Algebraic yval = mapSheets.select(i);
+                Algebraic yval = maple.select(mapSheets, i);
                 sheets.add(maple.algToPoint(yval));
             }
         } catch (MapleException e) {

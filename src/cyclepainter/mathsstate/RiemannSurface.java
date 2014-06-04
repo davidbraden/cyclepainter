@@ -21,6 +21,7 @@ import cyclepainter.mapleutil.*;
 import cyclepainter.exceptions.*;
 import cyclepainter.mathsstate.event.*;
 
+import javax.swing.*;
 import javax.swing.event.*;
 import java.util.*;
 import java.awt.geom.*;
@@ -107,7 +108,7 @@ public class RiemannSurface {
             newBranches = new HashSet<Point2D>();
 
             for (int i = 1; i <= mapBranches.length(); ++i)
-                newBranches.add(maple.algToPoint(mapBranches.select(i)));
+                newBranches.add(maple.algToPoint(maple.select(mapBranches, i)));
 
             newBasePoint = maple.algToPoint(maple.evaluate("mono[1]:"));
         } catch (MapleException e) {
