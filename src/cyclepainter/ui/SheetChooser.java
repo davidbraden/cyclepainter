@@ -147,10 +147,11 @@ public class SheetChooser extends JPanel implements PathSelectionListener,
         @Override
         public int getSize() {
             int size;
-            if (sheetsX == null)
+            if (sheetsX == null) {
                 size = 0;
-
-            size = picState.getCutScheme().numSheets();
+            } else {
+                size = picState.getCutScheme().numSheets();
+            }
 
             if (yValues == null || size != yValues.length)
                 yValues = new Point2D[size];
