@@ -198,6 +198,7 @@ public class MapleUtils {
                 @Override
                 public void run() {
                     try {
+                        System.out.println("Point "  + pt.toString());
                         if (pt instanceof ComplexNumeric) {
                             ComplexNumeric z = (ComplexNumeric) pt;
                             result[0] =  new Point2D.Double(z.realPart().doubleValue(), z
