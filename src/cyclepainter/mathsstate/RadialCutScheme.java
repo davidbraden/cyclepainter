@@ -78,6 +78,7 @@ public class RadialCutScheme extends CutScheme {
     @Override
     public Point2D getYValue(Point2D x, int sheet)
             throws SheetPropagationException {
+        System.out.println("RadialCutScheme getYValue");
         if (lastX == null || !lastX.equals(x)) {
             lastX = (Point2D) x.clone();
             lastSheets = getAllSheets(lastX);
