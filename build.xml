@@ -39,7 +39,7 @@
       <classpath refid="maple.classes"/>
       <compilerarg value="-Xlint:deprecation"/>
     </javac>
-    <copy todir="${build.dir}/cyclepainter/mapleutil" file="src/cyclepainter/mapleutil/utils.mpl"/>
+    <copy todir="${build.dir}/cyclepainter/mapleutil" file="src/cyclepainter/utils.mpl"/>
   </target>
 
   <!-- ================================= 

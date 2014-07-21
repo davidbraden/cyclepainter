@@ -18,10 +18,7 @@
 
 package cyclepainter;
 
-import cyclepainter.exceptions.*;
-import cyclepainter.mathsstate.PicState;
-import cyclepainter.ui.MainWindow;
-import java.io.*;
+
 
 /**
  * 
@@ -29,39 +26,24 @@ import java.io.*;
  */
 public class Main {
 
+    private static MapleUtils maple = MapleUtils.connect();
+
     /**
      * @param args
      *            the command line arguments
      */
-    public static void main(String[] args) throws MapleInitException {
-        PicState picState;
+    public static void main(String[] args) throws Exception {
 
-        if (args.length > 0) {
-            try {
-                FileInputStream in = new FileInputStream(args[0]);
-                picState = new PicState(in);
-            } catch (FileNotFoundException e) {
-                System.err.println("File " + args[0] + " not found. Aborting.");
-                return;
-            } catch (IOException e) {
-                System.err.println("Error reading file " + args[0]
-                        + ". Aborting.");
-                return;
-            } catch (PicFormatException e) {
-                System.err.println("File " + args[0]
-                        + " is a malformed .pic file:");
-                System.err.println(e);
-                return;
-            } catch (SetSurfaceException e) {
-                System.err.println("Surface in " + args[0] + " is malformed.");
-                System.err.println(e);
-                return;
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    maple.evaluate("1+1;").toString();
+                    maple.evaluate("min(2,5);");
+                } catch (Exception e) {
+                }
             }
-        } else
-            picState = new PicState();
-
-        MainWindow p = new MainWindow(picState);
-        p.setVisible(true);
+        });
+        t.start();
     }
-
 }
