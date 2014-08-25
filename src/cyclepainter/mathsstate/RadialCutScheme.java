@@ -78,7 +78,6 @@ public class RadialCutScheme extends CutScheme {
     @Override
     public Point2D getYValue(Point2D x, int sheet)
             throws SheetPropagationException {
-        System.out.println("RadialCutScheme getYValue");
         if (lastX == null || !lastX.equals(x)) {
             lastX = (Point2D) x.clone();
             lastSheets = getAllSheets(lastX);
@@ -128,14 +127,14 @@ public class RadialCutScheme extends CutScheme {
             List inf = (List) maple
                     .evaluate("select(x->x[1]=infinity, cutmono):");
             cutsPermutation = new HashMap<Point2D, Algebraic>();
-            if (inf.length() > 0) {
+            if (maple.length(inf) > 0) {
                 List item = (List) maple.select(inf, 1);
                 cutsPermutation.put(RiemannSurface.INFINITY, maple.select(item, 2));
             }
 
             List mapBs = (List) maple
                     .evaluate("remove(x -> x[1]=infinity, cutmono):");
-            for (int i = 1; i <= mapBs.length(); ++i) {
+            for (int i = 1; i <= maple.length(mapBs); ++i) {
                 List item = (List) maple.select(mapBs, i);
                 cutsPermutation.put(maple.algToPoint(maple.select(item, 1)),
                         maple.select(item, 2));
@@ -178,9 +177,9 @@ public class RadialCutScheme extends CutScheme {
                 cmd = "apply_perm(group[invperm](%s), %d):";
             perm = cutsPermutation.get(descr.branch);
 
-            cmd = String.format(cmd, perm.toString(), sheet + 1);
+            cmd = String.format(cmd, maple.toString(perm), sheet + 1);
             Algebraic newSheet = maple.evaluate(cmd);
-            sheet = ((Numeric) newSheet).intValue() - 1;
+            sheet = maple.intValue(newSheet) - 1;
         } catch (MapleException e) {
             System.err
                     .println("Unexpected error applying known permutation to number");
@@ -214,21 +213,20 @@ public class RadialCutScheme extends CutScheme {
             // between
             // from and to.
             Collection<SheetChange> cuts = segmentParts(from, pt);
-            Procedure permute_list = (Procedure) maple
-                    .evaluate("op(permute_list):");
+            Procedure permute_list = (Procedure) maple.evaluate("op(permute_list):");
 
             for (SheetChange cut : cuts) {
                 Algebraic perm = cutsPermutation.get(cut.branch);
                 if (cut.dir == -1) {
                     String cmd = String.format("group[invperm](%s):",
-                            perm);
+                            maple.toString(perm));
                     perm = maple.evaluate(cmd);
                 }
-                mapSheets = (List) permute_list.execute(new Algebraic[] {
+                mapSheets = (List) maple.execute(permute_list, new Algebraic[] {
                         mapSheets, perm });
             }
 
-            for (int i = 1; i <= mapSheets.length(); ++i) {
+            for (int i = 1; i <= maple.length(mapSheets); ++i) {
                 Algebraic yval = maple.select(mapSheets, i);
                 sheets.add(maple.algToPoint(yval));
             }

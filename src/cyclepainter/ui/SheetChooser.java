@@ -161,7 +161,6 @@ public class SheetChooser extends JPanel implements PathSelectionListener,
 
         @Override
         public Object getElementAt(int index) {
-            System.out.println("SheetChooser getElementAt");
             Point2D sheet = null;
             try {
                 sheet = picState.getCutScheme().getYValue(sheetsX, index);

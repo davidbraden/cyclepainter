@@ -107,7 +107,7 @@ public class RiemannSurface {
             List mapBranches = (List) maple.evaluate("map(x->x[1], mono[3]):");
             newBranches = new HashSet<Point2D>();
 
-            for (int i = 1; i <= mapBranches.length(); ++i)
+            for (int i = 1; i <= maple.length(mapBranches); ++i)
                 newBranches.add(maple.algToPoint(maple.select(mapBranches, i)));
 
             newBasePoint = maple.algToPoint(maple.evaluate("mono[1]:"));

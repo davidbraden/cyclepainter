@@ -66,10 +66,10 @@ public class OutRadialCutScheme extends RadialCutScheme {
             List perms = (List) maple.evaluate("mono[3]:");
 
             for (int i = 1; i <= perms.length(); ++i) {
-                List pair = (List) perms.select(i);
-                Point2D branch = maple.algToPoint(pair.select(1));
+                List pair = (List) maple.select(perms, i);
+                Point2D branch = maple.algToPoint(maple.select(pair, 1));
 
-                cutsPermutation.put(branch, pair.select(2));
+                cutsPermutation.put(branch, maple.select(pair, 2));
             }
         } catch (MapleException e) {
             System.err.println("Unexpected format for monodromy");

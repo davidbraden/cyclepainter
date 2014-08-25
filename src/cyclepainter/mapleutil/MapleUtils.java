@@ -161,6 +161,48 @@ public class MapleUtils {
         return result[0];
     }
 
+    public Integer intValue(final Algebraic s) throws MapleException {
+        final Integer[] result = new Integer[1];
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println("Int value " + s);
+                        result[0] = ((Numeric) s).intValue();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return result[0];
+    }
+
+    public String toString(final Algebraic s) throws MapleException {
+        final String[] result = new String[1];
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println("To string ");
+                        result[0] = s.toString();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return result[0];
+    }
+
     /** Format a Point2D as a string in the complex plane */
     public static String pointToString(Point2D pt) {
         return String.format("%g%c%g*I", pt.getX(), pt.getY() >= 0 ? '+' : ' ',
@@ -178,8 +220,17 @@ public class MapleUtils {
         }
     }
 
-    public void assignName(String name, Algebraic value) throws MapleException {
-        engine.newName(name, true).assign(value);
+    public void assignName(final String name, final Algebraic value) {
+        submitAndWait(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    engine.newName(name, true).assign(value);
+                } catch (MapleException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     // Maple utilities
@@ -220,7 +271,6 @@ public class MapleUtils {
             throw new RuntimeException(e);
         }
         return result[0];
-
     }
 
     /**
@@ -241,7 +291,7 @@ public class MapleUtils {
         List newSheets;
         try {
             String cmd = String.format("lift_point(%s, %s, %s, %s):", curve,
-                    pointToString(from), pointToString(to), sheets);
+                    pointToString(from), pointToString(to), toString(sheets));
             limitNextCalc(2.0);
             newSheets = (List) evaluate(cmd);
             removeLimit();
@@ -302,10 +352,31 @@ public class MapleUtils {
         return result[0];
     }
 
+    public Algebraic execute(final Procedure procedure, final Algebraic[] algebraics) {
+        final Algebraic[] result = new Algebraic[1];
+        try {
+            submitAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println("Executing"  + procedure.toString());
+                        result[0] = procedure.execute(algebraics);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return result[0];
+    }
+
     public int length(final List list) {
         final int[] result = new int[1];
         try {
-            executor.submit(new Runnable() {
+            submitAndWait(new Runnable() {
                 @Override
                 public void run() {
                     try {
